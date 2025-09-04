@@ -1,5 +1,8 @@
-import { QueryClient, QueryFunction } from "@tanstack/react-query";
+import { QueryClient } from "@tanstack/react-query";
 
+type QueryFunction<T> = ({ queryKey }: { queryKey: string[] }) => Promise<T | null>;
+
+ 
 async function throwIfResNotOk(res: Response) {
   if (!res.ok) {
     const text = (await res.text()) || res.statusText;

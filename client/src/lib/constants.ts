@@ -31,3 +31,7 @@ export const STORAGE_KEYS = {
   TRANSACTIONS: "expense_tracker_transactions",
   CURRENT_USER: "expense_tracker_current_user",
 } as const;
+
+
+export const useAuth = () => {
+  return {isAuthenticated: true}}

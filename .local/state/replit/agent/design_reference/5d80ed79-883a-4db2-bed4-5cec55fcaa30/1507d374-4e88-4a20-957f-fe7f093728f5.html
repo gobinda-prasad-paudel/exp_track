@@ -1,0 +1,613 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>ExpenseTracker - Dashboard</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script>
+    tailwind.config = {
+        theme: {
+            extend: {
+                borderRadius: {
+                    lg: "var(--radius)",
+                    md: "calc(var(--radius) - 2px)",
+                    sm: "calc(var(--radius) - 4px)",
+                },
+                colors: {
+                    background: "var(--background)",
+                    foreground: "var(--foreground)",
+                    card: {
+                        DEFAULT: "var(--card)",
+                        foreground: "var(--card-foreground)",
+                    },
+                    popover: {
+                        DEFAULT: "var(--popover)",
+                        foreground: "var(--popover-foreground)",
+                    },
+                    primary: {
+                        DEFAULT: "var(--primary)",
+                        foreground: "var(--primary-foreground)",
+                    },
+                    secondary: {
+                        DEFAULT: "var(--secondary)",
+                        foreground: "var(--secondary-foreground)",
+                    },
+                    muted: {
+                        DEFAULT: "var(--muted)",
+                        foreground: "var(--muted-foreground)",
+                    },
+                    accent: {
+                        DEFAULT: "var(--accent)",
+                        foreground: "var(--accent-foreground)",
+                    },
+                    destructive: {
+                        DEFAULT: "var(--destructive)",
+                        foreground: "var(--destructive-foreground)",
+                    },
+                    border: "var(--border)",
+                    input: "var(--input)",
+                    ring: "var(--ring)",
+                    chart: {
+                        "1": "var(--chart-1)",
+                        "2": "var(--chart-2)",
+                        "3": "var(--chart-3)",
+                        "4": "var(--chart-4)",
+                        "5": "var(--chart-5)",
+                    }
+                },
+                fontFamily: {
+                    sans: ["var(--font-geist)"],
+                }
+            },
+        }
+    };
+    </script>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Geist:wght@100;200;300;400;500;600;700;800;900&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <style>
+        :root {
+            --font-geist: 'Geist', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            --radius: 0.5rem;
+            
+            /* Light theme - soft blue palette */
+            --background: hsl(210 20% 98%);
+            --foreground: hsl(215 25% 27%);
+            --card: hsl(0 0% 100%);
+            --card-foreground: hsl(215 25% 27%);
+            --popover: hsl(0 0% 100%);
+            --popover-foreground: hsl(215 25% 27%);
+            --primary: hsl(217 91% 60%);
+            --primary-foreground: hsl(0 0% 100%);
+            --secondary: hsl(210 40% 96%);
+            --secondary-foreground: hsl(215 25% 27%);
+            --muted: hsl(210 40% 96%);
+            --muted-foreground: hsl(215 16% 47%);
+            --accent: hsl(204 94% 94%);
+            --accent-foreground: hsl(217 91% 60%);
+            --destructive: hsl(0 72% 51%);
+            --destructive-foreground: hsl(0 0% 100%);
+            --border: hsl(214 32% 91%);
+            --input: hsl(214 32% 91%);
+            --ring: hsl(217 91% 60%);
+            --chart-1: hsl(217 91% 60%);
+            --chart-2: hsl(204 94% 94%);
+            --chart-3: hsl(180 40% 60%);
+            --chart-4: hsl(43 74% 66%);
+            --chart-5: hsl(270 60% 70%);
+        }
+        
+        body {
+            font-family: var(--font-geist);
+            background-color: hsl(var(--background));
+            color: hsl(var(--foreground));
+        }
+
+        .sidebar-transition {
+            transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+        }
+
+        .card-hover {
+            transition: all 0.2s ease-in-out;
+        }
+
+        .card-hover:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 8px 25px -8px rgba(59, 130, 246, 0.15);
+        }
+
+        .btn-primary {
+            background: linear-gradient(135deg, hsl(var(--primary)) 0%, hsl(217 91% 55%) 100%);
+            transition: all 0.2s ease-in-out;
+        }
+
+        .btn-primary:hover {
+            transform: translateY(-1px);
+            box-shadow: 0 4px 12px rgba(59, 130, 246, 0.4);
+        }
+
+        .income-gradient {
+            background: linear-gradient(135deg, #10B981 0%, #059669 100%);
+        }
+
+        .expense-gradient {
+            background: linear-gradient(135deg, #EF4444 0%, #DC2626 100%);
+        }
+
+        .balance-gradient {
+            background: linear-gradient(135deg, hsl(var(--primary)) 0%, #6366F1 100%);
+        }
+    </style>
+</head>
+<body class="bg-background text-foreground">
+    <!-- @COMPONENT: Layout -->
+    <div class="flex h-screen bg-background">
+        <!-- @COMPONENT: Sidebar -->
+        <aside class="w-64 bg-card border-r border-border sidebar-transition">
+            <div class="p-6 border-b border-border">
+                <div class="flex items-center space-x-2">
+                    <div class="w-8 h-8 bg-primary rounded-lg flex items-center justify-center">
+                        <i class="fas fa-wallet text-primary-foreground text-sm"></i>
+                    </div>
+                    <span class="text-xl font-semibold text-foreground">ExpenseTracker</span>
+                </div>
+            </div>
+            
+            <nav class="p-4 space-y-2">
+                <a href="#" class="flex items-center space-x-3 px-4 py-3 text-sm font-medium bg-accent text-accent-foreground rounded-lg">
+                    <i class="fas fa-chart-line w-4 h-4"></i>
+                    <span>Dashboard</span>
+                </a>
+                <a href="#" class="flex items-center space-x-3 px-4 py-3 text-sm font-medium text-muted-foreground hover:bg-muted hover:text-foreground rounded-lg transition-colors">
+                    <i class="fas fa-arrow-up w-4 h-4"></i>
+                    <span>Income</span>
+                </a>
+                <a href="#" class="flex items-center space-x-3 px-4 py-3 text-sm font-medium text-muted-foreground hover:bg-muted hover:text-foreground rounded-lg transition-colors">
+                    <i class="fas fa-arrow-down w-4 h-4"></i>
+                    <span>Expenses</span>
+                </a>
+                <a href="#" class="flex items-center space-x-3 px-4 py-3 text-sm font-medium text-muted-foreground hover:bg-muted hover:text-foreground rounded-lg transition-colors">
+                    <i class="fas fa-list w-4 h-4"></i>
+                    <span>Transactions</span>
+                </a>
+                <a href="#" class="flex items-center space-x-3 px-4 py-3 text-sm font-medium text-muted-foreground hover:bg-muted hover:text-foreground rounded-lg transition-colors">
+                    <i class="fas fa-download w-4 h-4"></i>
+                    <span>Export PDF</span>
+                </a>
+                <a href="#" class="flex items-center space-x-3 px-4 py-3 text-sm font-medium text-muted-foreground hover:bg-muted hover:text-foreground rounded-lg transition-colors">
+                    <i class="fas fa-user w-4 h-4"></i>
+                    <span>Profile</span>
+                </a>
+            </nav>
+
+            <div class="absolute bottom-4 left-4 right-4">
+                <div class="bg-muted rounded-lg p-4">
+                    <div class="flex items-center space-x-3">
+                        <!-- Avatar placeholder with user initials -->
+                        <div class="w-10 h-10 bg-primary rounded-full flex items-center justify-center">
+                            <span class="text-primary-foreground font-medium text-sm">JD</span>
+                        </div>
+                        <div class="flex-1 min-w-0">
+                            <p class="text-sm font-medium text-foreground truncate" data-mock="true">John Doe</p>
+                            <p class="text-xs text-muted-foreground truncate" data-mock="true">john@example.com</p>
+                        </div>
+                        <button class="text-muted-foreground hover:text-foreground">
+                            <i class="fas fa-sign-out-alt w-4 h-4"></i>
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </aside>
+        <!-- @END_COMPONENT: Sidebar -->
+
+        <!-- @COMPONENT: MainContent -->
+        <main class="flex-1 overflow-auto">
+            <!-- @COMPONENT: Header -->
+            <header class="bg-card border-b border-border p-6">
+                <div class="flex items-center justify-between">
+                    <div>
+                        <h1 class="text-2xl font-bold text-foreground">Dashboard</h1>
+                        <p class="text-sm text-muted-foreground">Welcome back! Here's your financial overview.</p>
+                    </div>
+                    <div class="flex items-center space-x-4">
+                        <!-- BS Date Display -->
+                        <div class="bg-accent text-accent-foreground px-4 py-2 rounded-lg text-sm font-medium">
+                            <i class="fas fa-calendar-alt mr-2"></i>
+                            <span data-mock="true">२०८१ साल मंसिर १५ गते</span>
+                        </div>
+                        <button class="btn-primary text-primary-foreground px-4 py-2 rounded-lg text-sm font-medium">
+                            <i class="fas fa-plus mr-2"></i>
+                            Add Transaction
+                        </button>
+                    </div>
+                </div>
+            </header>
+            <!-- @END_COMPONENT: Header -->
+
+            <!-- @COMPONENT: DashboardContent -->
+            <div class="p-6 space-y-6">
+                <!-- @COMPONENT: StatsCards -->
+                <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+                    <div class="bg-card rounded-lg border border-border p-6 card-hover">
+                        <div class="flex items-center justify-between">
+                            <div>
+                                <p class="text-sm font-medium text-muted-foreground">Total Balance</p>
+                                <p class="text-3xl font-bold text-foreground" data-mock="true">₹1,24,580</p>
+                                <p class="text-xs text-green-600 flex items-center mt-2">
+                                    <i class="fas fa-arrow-up mr-1"></i>
+                                    <span data-mock="true">+12.5% from last month</span>
+                                </p>
+                            </div>
+                            <div class="w-12 h-12 balance-gradient rounded-lg flex items-center justify-center">
+                                <i class="fas fa-wallet text-white"></i>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="bg-card rounded-lg border border-border p-6 card-hover">
+                        <div class="flex items-center justify-between">
+                            <div>
+                                <p class="text-sm font-medium text-muted-foreground">Total Income</p>
+                                <p class="text-3xl font-bold text-foreground" data-mock="true">₹1,45,000</p>
+                                <p class="text-xs text-green-600 flex items-center mt-2">
+                                    <i class="fas fa-arrow-up mr-1"></i>
+                                    <span data-mock="true">+8.2% from last month</span>
+                                </p>
+                            </div>
+                            <div class="w-12 h-12 income-gradient rounded-lg flex items-center justify-center">
+                                <i class="fas fa-arrow-up text-white"></i>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="bg-card rounded-lg border border-border p-6 card-hover">
+                        <div class="flex items-center justify-between">
+                            <div>
+                                <p class="text-sm font-medium text-muted-foreground">Total Expenses</p>
+                                <p class="text-3xl font-bold text-foreground" data-mock="true">₹20,420</p>
+                                <p class="text-xs text-red-600 flex items-center mt-2">
+                                    <i class="fas fa-arrow-up mr-1"></i>
+                                    <span data-mock="true">+3.1% from last month</span>
+                                </p>
+                            </div>
+                            <div class="w-12 h-12 expense-gradient rounded-lg flex items-center justify-center">
+                                <i class="fas fa-arrow-down text-white"></i>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="bg-card rounded-lg border border-border p-6 card-hover">
+                        <div class="flex items-center justify-between">
+                            <div>
+                                <p class="text-sm font-medium text-muted-foreground">Total Transactions</p>
+                                <p class="text-3xl font-bold text-foreground" data-mock="true">247</p>
+                                <p class="text-xs text-blue-600 flex items-center mt-2">
+                                    <i class="fas fa-arrow-up mr-1"></i>
+                                    <span data-mock="true">+15 this month</span>
+                                </p>
+                            </div>
+                            <div class="w-12 h-12 bg-primary rounded-lg flex items-center justify-center">
+                                <i class="fas fa-list text-primary-foreground"></i>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                <!-- @END_COMPONENT: StatsCards -->
+
+                <!-- @COMPONENT: MonthlyOverview -->
+                <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
+                    <div class="lg:col-span-1 space-y-6">
+                        <div class="bg-card rounded-lg border border-border p-6">
+                            <h3 class="text-lg font-semibold text-foreground mb-4">This Month</h3>
+                            <div class="space-y-4">
+                                <div class="flex items-center justify-between p-4 bg-green-50 rounded-lg">
+                                    <div class="flex items-center space-x-3">
+                                        <div class="w-10 h-10 income-gradient rounded-lg flex items-center justify-center">
+                                            <i class="fas fa-arrow-up text-white text-sm"></i>
+                                        </div>
+                                        <div>
+                                            <p class="text-sm font-medium text-gray-900">Income</p>
+                                            <p class="text-xs text-gray-500">मंसिर महिना</p>
+                                        </div>
+                                    </div>
+                                    <p class="text-lg font-bold text-green-600" data-mock="true">₹85,000</p>
+                                </div>
+
+                                <div class="flex items-center justify-between p-4 bg-red-50 rounded-lg">
+                                    <div class="flex items-center space-x-3">
+                                        <div class="w-10 h-10 expense-gradient rounded-lg flex items-center justify-center">
+                                            <i class="fas fa-arrow-down text-white text-sm"></i>
+                                        </div>
+                                        <div>
+                                            <p class="text-sm font-medium text-gray-900">Expenses</p>
+                                            <p class="text-xs text-gray-500">मंसिर महिना</p>
+                                        </div>
+                                    </div>
+                                    <p class="text-lg font-bold text-red-600" data-mock="true">₹12,450</p>
+                                </div>
+
+                                <div class="flex items-center justify-between p-4 bg-blue-50 rounded-lg">
+                                    <div class="flex items-center space-x-3">
+                                        <div class="w-10 h-10 balance-gradient rounded-lg flex items-center justify-center">
+                                            <i class="fas fa-chart-line text-white text-sm"></i>
+                                        </div>
+                                        <div>
+                                            <p class="text-sm font-medium text-gray-900">Net Savings</p>
+                                            <p class="text-xs text-gray-500">मंसिर महिना</p>
+                                        </div>
+                                    </div>
+                                    <p class="text-lg font-bold text-blue-600" data-mock="true">₹72,550</p>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- @COMPONENT: ChartSection -->
+                    <div class="lg:col-span-2 bg-card rounded-lg border border-border p-6">
+                        <div class="flex items-center justify-between mb-6">
+                            <h3 class="text-lg font-semibold text-foreground">Income vs Expenses</h3>
+                            <select class="text-sm border border-border rounded-lg px-3 py-2 bg-background text-foreground">
+                                <option data-mock="true">Last 6 Months</option>
+                                <option data-mock="true">Last Year</option>
+                                <option data-mock="true">All Time</option>
+                            </select>
+                        </div>
+                        <div class="h-64">
+                            <canvas id="incomeExpenseChart" width="400" height="200"></canvas>
+                        </div>
+                    </div>
+                </div>
+                <!-- @END_COMPONENT: MonthlyOverview -->
+
+                <!-- @COMPONENT: RecentTransactions -->
+                <div class="bg-card rounded-lg border border-border p-6">
+                    <div class="flex items-center justify-between mb-6">
+                        <h3 class="text-lg font-semibold text-foreground">Recent Transactions</h3>
+                        <a href="#" class="text-sm text-primary hover:underline">View All</a>
+                    </div>
+                    
+                    <div class="overflow-x-auto">
+                        <table class="w-full">
+                            <thead>
+                                <tr class="border-b border-border">
+                                    <th class="text-left py-3 px-4 text-sm font-medium text-muted-foreground">Date</th>
+                                    <th class="text-left py-3 px-4 text-sm font-medium text-muted-foreground">Description</th>
+                                    <th class="text-left py-3 px-4 text-sm font-medium text-muted-foreground">Category</th>
+                                    <th class="text-left py-3 px-4 text-sm font-medium text-muted-foreground">Type</th>
+                                    <th class="text-right py-3 px-4 text-sm font-medium text-muted-foreground">Amount</th>
+                                    <th class="text-right py-3 px-4 text-sm font-medium text-muted-foreground">Actions</th>
+                                </tr>
+                            </thead>
+                            <!-- @MAP: transactions.slice(0, 10).map(transaction => ( -->
+                            <tbody class="divide-y divide-border" data-mock="true">
+                                <tr class="hover:bg-muted/50 transition-colors">
+                                    <td class="py-4 px-4 text-sm text-foreground">२०८१/०८/१५</td>
+                                    <td class="py-4 px-4 text-sm text-foreground">Monthly Salary</td>
+                                    <td class="py-4 px-4">
+                                        <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-green-100 text-green-800">
+                                            Salary
+                                        </span>
+                                    </td>
+                                    <td class="py-4 px-4">
+                                        <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-green-100 text-green-800">
+                                            <i class="fas fa-arrow-up mr-1"></i>
+                                            Income
+                                        </span>
+                                    </td>
+                                    <td class="py-4 px-4 text-sm font-medium text-right text-green-600">+₹85,000</td>
+                                    <td class="py-4 px-4 text-right">
+                                        <div class="flex items-center justify-end space-x-2">
+                                            <button class="text-primary hover:text-primary/80">
+                                                <i class="fas fa-edit"></i>
+                                            </button>
+                                            <button class="text-destructive hover:text-destructive/80">
+                                                <i class="fas fa-trash"></i>
+                                            </button>
+                                        </div>
+                                    </td>
+                                </tr>
+                                <tr class="hover:bg-muted/50 transition-colors">
+                                    <td class="py-4 px-4 text-sm text-foreground">२०८१/०८/१४</td>
+                                    <td class="py-4 px-4 text-sm text-foreground">Grocery Shopping</td>
+                                    <td class="py-4 px-4">
+                                        <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-red-100 text-red-800">
+                                            Food & Dining
+                                        </span>
+                                    </td>
+                                    <td class="py-4 px-4">
+                                        <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-red-100 text-red-800">
+                                            <i class="fas fa-arrow-down mr-1"></i>
+                                            Expense
+                                        </span>
+                                    </td>
+                                    <td class="py-4 px-4 text-sm font-medium text-right text-red-600">-₹2,450</td>
+                                    <td class="py-4 px-4 text-right">
+                                        <div class="flex items-center justify-end space-x-2">
+                                            <button class="text-primary hover:text-primary/80">
+                                                <i class="fas fa-edit"></i>
+                                            </button>
+                                            <button class="text-destructive hover:text-destructive/80">
+                                                <i class="fas fa-trash"></i>
+                                            </button>
+                                        </div>
+                                    </td>
+                                </tr>
+                                <tr class="hover:bg-muted/50 transition-colors">
+                                    <td class="py-4 px-4 text-sm text-foreground">२०८१/०८/१२</td>
+                                    <td class="py-4 px-4 text-sm text-foreground">Freelance Project</td>
+                                    <td class="py-4 px-4">
+                                        <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-green-100 text-green-800">
+                                            Freelance
+                                        </span>
+                                    </td>
+                                    <td class="py-4 px-4">
+                                        <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-green-100 text-green-800">
+                                            <i class="fas fa-arrow-up mr-1"></i>
+                                            Income
+                                        </span>
+                                    </td>
+                                    <td class="py-4 px-4 text-sm font-medium text-right text-green-600">+₹15,000</td>
+                                    <td class="py-4 px-4 text-right">
+                                        <div class="flex items-center justify-end space-x-2">
+                                            <button class="text-primary hover:text-primary/80">
+                                                <i class="fas fa-edit"></i>
+                                            </button>
+                                            <button class="text-destructive hover:text-destructive/80">
+                                                <i class="fas fa-trash"></i>
+                                            </button>
+                                        </div>
+                                    </td>
+                                </tr>
+                                <tr class="hover:bg-muted/50 transition-colors">
+                                    <td class="py-4 px-4 text-sm text-foreground">२०८१/०८/१०</td>
+                                    <td class="py-4 px-4 text-sm text-foreground">Internet Bill</td>
+                                    <td class="py-4 px-4">
+                                        <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-red-100 text-red-800">
+                                            Bills & Utilities
+                                        </span>
+                                    </td>
+                                    <td class="py-4 px-4">
+                                        <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-red-100 text-red-800">
+                                            <i class="fas fa-arrow-down mr-1"></i>
+                                            Expense
+                                        </span>
+                                    </td>
+                                    <td class="py-4 px-4 text-sm font-medium text-right text-red-600">-₹1,200</td>
+                                    <td class="py-4 px-4 text-right">
+                                        <div class="flex items-center justify-end space-x-2">
+                                            <button class="text-primary hover:text-primary/80">
+                                                <i class="fas fa-edit"></i>
+                                            </button>
+                                            <button class="text-destructive hover:text-destructive/80">
+                                                <i class="fas fa-trash"></i>
+                                            </button>
+                                        </div>
+                                    </td>
+                                </tr>
+                                <tr class="hover:bg-muted/50 transition-colors">
+                                    <td class="py-4 px-4 text-sm text-foreground">२०८१/०८/०८</td>
+                                    <td class="py-4 px-4 text-sm text-foreground">Transportation</td>
+                                    <td class="py-4 px-4">
+                                        <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-red-100 text-red-800">
+                                            Transportation
+                                        </span>
+                                    </td>
+                                    <td class="py-4 px-4">
+                                        <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-red-100 text-red-800">
+                                            <i class="fas fa-arrow-down mr-1"></i>
+                                            Expense
+                                        </span>
+                                    </td>
+                                    <td class="py-4 px-4 text-sm font-medium text-right text-red-600">-₹850</td>
+                                    <td class="py-4 px-4 text-right">
+                                        <div class="flex items-center justify-end space-x-2">
+                                            <button class="text-primary hover:text-primary/80">
+                                                <i class="fas fa-edit"></i>
+                                            </button>
+                                            <button class="text-destructive hover:text-destructive/80">
+                                                <i class="fas fa-trash"></i>
+                                            </button>
+                                        </div>
+                                    </td>
+                                </tr>
+                            </tbody>
+                            <!-- @END_MAP )) -->
+                        </table>
+                    </div>
+                </div>
+                <!-- @END_COMPONENT: RecentTransactions -->
+
+                <!-- @COMPONENT: QuickActions -->
+                <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+                    <button class="flex items-center justify-center space-x-2 bg-green-50 hover:bg-green-100 border border-green-200 rounded-lg p-4 transition-colors">
+                        <i class="fas fa-plus text-green-600"></i>
+                        <span class="text-sm font-medium text-green-800">Add Income</span>
+                    </button>
+                    <button class="flex items-center justify-center space-x-2 bg-red-50 hover:bg-red-100 border border-red-200 rounded-lg p-4 transition-colors">
+                        <i class="fas fa-minus text-red-600"></i>
+                        <span class="text-sm font-medium text-red-800">Add Expense</span>
+                    </button>
+                    <button class="flex items-center justify-center space-x-2 bg-blue-50 hover:bg-blue-100 border border-blue-200 rounded-lg p-4 transition-colors">
+                        <i class="fas fa-chart-bar text-blue-600"></i>
+                        <span class="text-sm font-medium text-blue-800">View Reports</span>
+                    </button>
+                    <button class="flex items-center justify-center space-x-2 bg-purple-50 hover:bg-purple-100 border border-purple-200 rounded-lg p-4 transition-colors">
+                        <i class="fas fa-download text-purple-600"></i>
+                        <span class="text-sm font-medium text-purple-800">Export PDF</span>
+                    </button>
+                </div>
+                <!-- @END_COMPONENT: QuickActions -->
+            </div>
+            <!-- @END_COMPONENT: DashboardContent -->
+        </main>
+        <!-- @END_COMPONENT: MainContent -->
+    </div>
+    <!-- @END_COMPONENT: Layout -->
+
+    <script>
+        // Chart initialization and mock data visualization
+        (function() {
+            const ctx = document.getElementById('incomeExpenseChart');
+            if (ctx) {
+                const chart = new Chart(ctx, {
+                    type: 'line',
+                    data: {
+                        labels: ['जेठ', 'असार', 'साउन', 'भदौ', 'असिन', 'कार्तिक'],
+                        datasets: [{
+                            label: 'Income',
+                            data: [65000, 72000, 68000, 85000, 78000, 85000],
+                            borderColor: '#10B981',
+                            backgroundColor: 'rgba(16, 185, 129, 0.1)',
+                            tension: 0.4,
+                            fill: true
+                        }, {
+                            label: 'Expenses',
+                            data: [15000, 18000, 12000, 22000, 16000, 12450],
+                            borderColor: '#EF4444',
+                            backgroundColor: 'rgba(239, 68, 68, 0.1)',
+                            tension: 0.4,
+                            fill: true
+                        }]
+                    },
+                    options: {
+                        responsive: true,
+                        maintainAspectRatio: false,
+                        interaction: {
+                            intersect: false,
+                            mode: 'index'
+                        },
+                        plugins: {
+                            legend: {
+                                position: 'top',
+                            }
+                        },
+                        scales: {
+                            y: {
+                                beginAtZero: true,
+                                ticks: {
+                                    callback: function(value, index, ticks) {
+                                        return '₹' + value.toLocaleString();
+                                    }
+                                }
+                            }
+                        }
+                    }
+                });
+            }
+            
+            // TODO: Implement state management for transactions, income, expenses
+            // TODO: Add form validation and error handling
+            // TODO: Implement BS date conversion functions
+            // TODO: Add localStorage persistence for data
+            // TODO: Implement CRUD operations for transactions
+            // TODO: Add PDF export functionality
+            // TODO: Implement search and filter functionality
+            // TODO: Add responsive chart resizing
+            
+        })();
+    </script>
+</body>
+</html>

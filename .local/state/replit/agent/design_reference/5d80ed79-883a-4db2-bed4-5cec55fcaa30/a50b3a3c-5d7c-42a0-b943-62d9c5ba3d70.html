@@ -1,0 +1,556 @@
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>ExpenseTracker - Dashboard</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script>
+    tailwind.config = {
+        theme: {
+            extend: {
+                borderRadius: {
+                    lg: "var(--radius)",
+                    md: "calc(var(--radius) - 2px)",
+                    sm: "calc(var(--radius) - 4px)",
+                },
+                colors: {
+                    background: "var(--background)",
+                    foreground: "var(--foreground)",
+                    card: {
+                        DEFAULT: "var(--card)",
+                        foreground: "var(--card-foreground)",
+                    },
+                    popover: {
+                        DEFAULT: "var(--popover)",
+                        foreground: "var(--popover-foreground)",
+                    },
+                    primary: {
+                        DEFAULT: "var(--primary)",
+                        foreground: "var(--primary-foreground)",
+                    },
+                    secondary: {
+                        DEFAULT: "var(--secondary)",
+                        foreground: "var(--secondary-foreground)",
+                    },
+                    muted: {
+                        DEFAULT: "var(--muted)",
+                        foreground: "var(--muted-foreground)",
+                    },
+                    accent: {
+                        DEFAULT: "var(--accent)",
+                        foreground: "var(--accent-foreground)",
+                    },
+                    destructive: {
+                        DEFAULT: "var(--destructive)",
+                        foreground: "var(--destructive-foreground)",
+                    },
+                    border: "var(--border)",
+                    input: "var(--input)",
+                    ring: "var(--ring)",
+                    chart: {
+                        "1": "var(--chart-1)",
+                        "2": "var(--chart-2)",
+                        "3": "var(--chart-3)",
+                        "4": "var(--chart-4)",
+                        "5": "var(--chart-5)",
+                    }
+                },
+                fontFamily: {
+                    sans: ["var(--font-sans)"],
+                    serif: ["var(--font-serif)"],
+                    mono: ["var(--font-mono)"],
+                }
+            },
+        }
+    };
+    </script>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <style>
+        :root {
+            --font-sans: 'Inter', system-ui, -apple-system, sans-serif;
+            --radius: 0.5rem;
+            
+            /* Light theme */
+            --background: hsl(0 0% 100%);
+            --foreground: hsl(222.2 84% 4.9%);
+            --card: hsl(0 0% 100%);
+            --card-foreground: hsl(222.2 84% 4.9%);
+            --popover: hsl(0 0% 100%);
+            --popover-foreground: hsl(222.2 84% 4.9%);
+            --primary: hsl(217.2 91% 59.8%);
+            --primary-foreground: hsl(0 0% 98%);
+            --secondary: hsl(210 40% 96%);
+            --secondary-foreground: hsl(222.2 47.4% 11.2%);
+            --muted: hsl(210 40% 96%);
+            --muted-foreground: hsl(215.4 16.3% 46.9%);
+            --accent: hsl(210 40% 96%);
+            --accent-foreground: hsl(222.2 47.4% 11.2%);
+            --destructive: hsl(0 72.2% 50.6%);
+            --destructive-foreground: hsl(0 0% 98%);
+            --border: hsl(214.3 31.8% 91.4%);
+            --input: hsl(214.3 31.8% 91.4%);
+            --ring: hsl(217.2 91% 59.8%);
+            --chart-1: hsl(217.2 91% 59.8%);
+            --chart-2: hsl(173.4 80% 36.1%);
+            --chart-3: hsl(197.4 73.7% 51.8%);
+            --chart-4: hsl(43.3 96.4% 56.3%);
+            --chart-5: hsl(27.8 95.8% 53.3%);
+        }
+        
+        body { 
+            font-family: var(--font-sans);
+            background-color: hsl(var(--background));
+            color: hsl(var(--foreground));
+        }
+        
+        .sidebar-nav-link:hover {
+            background-color: hsl(var(--accent));
+            color: hsl(var(--accent-foreground));
+        }
+        
+        .sidebar-nav-link.active {
+            background-color: hsl(var(--primary));
+            color: hsl(var(--primary-foreground));
+        }
+        
+        .chart-container {
+            position: relative;
+            height: 300px;
+        }
+        
+        .transaction-item:hover {
+            background-color: hsl(var(--muted));
+        }
+        
+        .stat-card {
+            transition: all 0.2s ease;
+        }
+        
+        .stat-card:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.1), 0 4px 6px -2px rgba(0, 0, 0, 0.05);
+        }
+    </style>
+</head>
+<body class="bg-background">
+    <!-- @COMPONENT: Layout -->
+    <div class="flex h-screen bg-background">
+        <!-- @COMPONENT: Sidebar -->
+        <aside class="w-64 bg-card border-r border-border shadow-sm">
+            <div class="p-6 border-b border-border">
+                <div class="flex items-center space-x-2">
+                    <div class="w-8 h-8 bg-primary rounded-lg flex items-center justify-center">
+                        <i class="fas fa-wallet text-primary-foreground text-sm"></i>
+                    </div>
+                    <h1 class="text-xl font-semibold text-foreground">ExpenseTracker</h1>
+                </div>
+            </div>
+            
+            <nav class="p-4 space-y-2">
+                <!-- @COMPONENT: NavigationLink [active] -->
+                <a href="#" class="sidebar-nav-link active flex items-center space-x-3 px-3 py-2 rounded-md transition-colors duration-200">
+                    <i class="fas fa-chart-pie w-5"></i>
+                    <span class="font-medium">Dashboard</span>
+                </a>
+                
+                <!-- @COMPONENT: NavigationLink -->
+                <a href="#" class="sidebar-nav-link flex items-center space-x-3 px-3 py-2 rounded-md text-muted-foreground hover:text-foreground transition-colors duration-200">
+                    <i class="fas fa-plus-circle w-5"></i>
+                    <span class="font-medium">Income</span>
+                </a>
+                
+                <!-- @COMPONENT: NavigationLink -->
+                <a href="#" class="sidebar-nav-link flex items-center space-x-3 px-3 py-2 rounded-md text-muted-foreground hover:text-foreground transition-colors duration-200">
+                    <i class="fas fa-minus-circle w-5"></i>
+                    <span class="font-medium">Expenses</span>
+                </a>
+                
+                <!-- @COMPONENT: NavigationLink -->
+                <a href="#" class="sidebar-nav-link flex items-center space-x-3 px-3 py-2 rounded-md text-muted-foreground hover:text-foreground transition-colors duration-200">
+                    <i class="fas fa-list w-5"></i>
+                    <span class="font-medium">Transactions</span>
+                </a>
+                
+                <!-- @COMPONENT: NavigationLink -->
+                <a href="#" class="sidebar-nav-link flex items-center space-x-3 px-3 py-2 rounded-md text-muted-foreground hover:text-foreground transition-colors duration-200">
+                    <i class="fas fa-file-pdf w-5"></i>
+                    <span class="font-medium">Export PDF</span>
+                </a>
+                
+                <div class="pt-4 mt-4 border-t border-border">
+                    <!-- @COMPONENT: NavigationLink -->
+                    <a href="#" class="sidebar-nav-link flex items-center space-x-3 px-3 py-2 rounded-md text-muted-foreground hover:text-foreground transition-colors duration-200">
+                        <i class="fas fa-user w-5"></i>
+                        <span class="font-medium">Profile</span>
+                    </a>
+                    
+                    <!-- @COMPONENT: NavigationLink -->
+                    <a href="#" class="sidebar-nav-link flex items-center space-x-3 px-3 py-2 rounded-md text-muted-foreground hover:text-foreground transition-colors duration-200">
+                        <i class="fas fa-sign-out-alt w-5"></i>
+                        <span class="font-medium">Logout</span>
+                    </a>
+                </div>
+            </nav>
+        </aside>
+        <!-- @END_COMPONENT: Sidebar -->
+        
+        <!-- @COMPONENT: MainContent -->
+        <main class="flex-1 overflow-auto">
+            <!-- @COMPONENT: Header -->
+            <header class="bg-card border-b border-border px-6 py-4">
+                <div class="flex items-center justify-between">
+                    <div>
+                        <h2 class="text-2xl font-semibold text-foreground">Dashboard</h2>
+                        <p class="text-muted-foreground">Welcome back! Here's your financial overview</p>
+                    </div>
+                    <div class="flex items-center space-x-4">
+                        <!-- @COMPONENT: DateDisplay [BS Date] -->
+                        <div class="text-sm text-muted-foreground">
+                            <span data-bind="bsDate">२०८१ साल कार्तिक १५ गते</span>
+                        </div>
+                        <!-- @COMPONENT: UserAvatar -->
+                        <div class="w-8 h-8 bg-primary rounded-full flex items-center justify-center">
+                            <span class="text-primary-foreground text-sm font-medium" data-bind="user.initials">JD</span>
+                        </div>
+                    </div>
+                </div>
+            </header>
+            <!-- @END_COMPONENT: Header -->
+            
+            <!-- @COMPONENT: DashboardContent -->
+            <div class="p-6 space-y-6">
+                <!-- @COMPONENT: StatsGrid -->
+                <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+                    <!-- @COMPONENT: StatCard [Total Balance] -->
+                    <div class="stat-card bg-card rounded-lg border border-border p-6 shadow-sm">
+                        <div class="flex items-center justify-between">
+                            <div>
+                                <p class="text-sm font-medium text-muted-foreground">Total Balance</p>
+                                <p class="text-2xl font-bold text-foreground" data-bind="totalBalance">रु. 2,45,000</p>
+                            </div>
+                            <div class="w-12 h-12 bg-primary/10 rounded-lg flex items-center justify-center">
+                                <i class="fas fa-wallet text-primary text-lg"></i>
+                            </div>
+                        </div>
+                        <div class="flex items-center mt-4 text-sm">
+                            <i class="fas fa-arrow-up text-green-500 mr-1"></i>
+                            <span class="text-green-500 font-medium">+12.5%</span>
+                            <span class="text-muted-foreground ml-1">from last month</span>
+                        </div>
+                    </div>
+                    
+                    <!-- @COMPONENT: StatCard [Total Income] -->
+                    <div class="stat-card bg-card rounded-lg border border-border p-6 shadow-sm">
+                        <div class="flex items-center justify-between">
+                            <div>
+                                <p class="text-sm font-medium text-muted-foreground">Total Income</p>
+                                <p class="text-2xl font-bold text-green-600" data-bind="totalIncome">रु. 3,50,000</p>
+                            </div>
+                            <div class="w-12 h-12 bg-green-100 rounded-lg flex items-center justify-center">
+                                <i class="fas fa-plus-circle text-green-600 text-lg"></i>
+                            </div>
+                        </div>
+                        <div class="flex items-center mt-4 text-sm">
+                            <i class="fas fa-arrow-up text-green-500 mr-1"></i>
+                            <span class="text-green-500 font-medium">+8.2%</span>
+                            <span class="text-muted-foreground ml-1">from last month</span>
+                        </div>
+                    </div>
+                    
+                    <!-- @COMPONENT: StatCard [Total Expenses] -->
+                    <div class="stat-card bg-card rounded-lg border border-border p-6 shadow-sm">
+                        <div class="flex items-center justify-between">
+                            <div>
+                                <p class="text-sm font-medium text-muted-foreground">Total Expenses</p>
+                                <p class="text-2xl font-bold text-red-600" data-bind="totalExpenses">रु. 1,05,000</p>
+                            </div>
+                            <div class="w-12 h-12 bg-red-100 rounded-lg flex items-center justify-center">
+                                <i class="fas fa-minus-circle text-red-600 text-lg"></i>
+                            </div>
+                        </div>
+                        <div class="flex items-center mt-4 text-sm">
+                            <i class="fas fa-arrow-down text-green-500 mr-1"></i>
+                            <span class="text-green-500 font-medium">-3.1%</span>
+                            <span class="text-muted-foreground ml-1">from last month</span>
+                        </div>
+                    </div>
+                    
+                    <!-- @COMPONENT: StatCard [Total Transactions] -->
+                    <div class="stat-card bg-card rounded-lg border border-border p-6 shadow-sm">
+                        <div class="flex items-center justify-between">
+                            <div>
+                                <p class="text-sm font-medium text-muted-foreground">Transactions</p>
+                                <p class="text-2xl font-bold text-foreground" data-bind="totalTransactions">127</p>
+                            </div>
+                            <div class="w-12 h-12 bg-blue-100 rounded-lg flex items-center justify-center">
+                                <i class="fas fa-list text-blue-600 text-lg"></i>
+                            </div>
+                        </div>
+                        <div class="flex items-center mt-4 text-sm">
+                            <i class="fas fa-arrow-up text-green-500 mr-1"></i>
+                            <span class="text-green-500 font-medium">+15</span>
+                            <span class="text-muted-foreground ml-1">this month</span>
+                        </div>
+                    </div>
+                </div>
+                <!-- @END_COMPONENT: StatsGrid -->
+                
+                <!-- @COMPONENT: ChartsAndTransactions -->
+                <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
+                    <!-- @COMPONENT: ChartsSection -->
+                    <div class="lg:col-span-2 space-y-6">
+                        <!-- @COMPONENT: MonthlyOverview -->
+                        <div class="bg-card rounded-lg border border-border p-6 shadow-sm">
+                            <div class="flex items-center justify-between mb-6">
+                                <h3 class="text-lg font-semibold text-foreground">Monthly Overview</h3>
+                                <select class="text-sm border border-border rounded-md px-3 py-1 bg-background text-foreground">
+                                    <option>कार्तिक २०८१</option>
+                                    <option>असोज २०८१</option>
+                                    <option>भदौ २०८१</option>
+                                </select>
+                            </div>
+                            <div class="chart-container">
+                                <canvas id="monthlyChart"></canvas>
+                            </div>
+                        </div>
+                        
+                        <!-- @COMPONENT: CategoryBreakdown -->
+                        <div class="bg-card rounded-lg border border-border p-6 shadow-sm">
+                            <h3 class="text-lg font-semibold text-foreground mb-6">Expense Categories</h3>
+                            <div class="chart-container">
+                                <canvas id="categoryChart"></canvas>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <!-- @COMPONENT: RecentTransactions -->
+                    <div class="bg-card rounded-lg border border-border p-6 shadow-sm">
+                        <div class="flex items-center justify-between mb-6">
+                            <h3 class="text-lg font-semibold text-foreground">Recent Transactions</h3>
+                            <a href="#" class="text-sm text-primary hover:text-primary/80 font-medium">View All</a>
+                        </div>
+                        
+                        <div class="space-y-4">
+                            <!-- @MAP: recentTransactions.slice(0, 10).map(transaction => ( -->
+                            
+                            <!-- @COMPONENT: TransactionItem [Income] -->
+                            <div class="transaction-item flex items-center justify-between p-3 rounded-lg hover:bg-muted transition-colors duration-200" data-mock="true">
+                                <div class="flex items-center space-x-3">
+                                    <div class="w-10 h-10 bg-green-100 rounded-lg flex items-center justify-center">
+                                        <i class="fas fa-briefcase text-green-600"></i>
+                                    </div>
+                                    <div>
+                                        <p class="font-medium text-foreground">Salary</p>
+                                        <p class="text-sm text-muted-foreground">कार्तिक १५ गते</p>
+                                    </div>
+                                </div>
+                                <span class="font-semibold text-green-600">+रु. 85,000</span>
+                            </div>
+                            
+                            <!-- @COMPONENT: TransactionItem [Expense] -->
+                            <div class="transaction-item flex items-center justify-between p-3 rounded-lg hover:bg-muted transition-colors duration-200" data-mock="true">
+                                <div class="flex items-center space-x-3">
+                                    <div class="w-10 h-10 bg-red-100 rounded-lg flex items-center justify-center">
+                                        <i class="fas fa-utensils text-red-600"></i>
+                                    </div>
+                                    <div>
+                                        <p class="font-medium text-foreground">Food & Dining</p>
+                                        <p class="text-sm text-muted-foreground">कार्तिक १४ गते</p>
+                                    </div>
+                                </div>
+                                <span class="font-semibold text-red-600">-रु. 2,500</span>
+                            </div>
+                            
+                            <!-- @COMPONENT: TransactionItem [Expense] -->
+                            <div class="transaction-item flex items-center justify-between p-3 rounded-lg hover:bg-muted transition-colors duration-200" data-mock="true">
+                                <div class="flex items-center space-x-3">
+                                    <div class="w-10 h-10 bg-red-100 rounded-lg flex items-center justify-center">
+                                        <i class="fas fa-car text-red-600"></i>
+                                    </div>
+                                    <div>
+                                        <p class="font-medium text-foreground">Transportation</p>
+                                        <p class="text-sm text-muted-foreground">कार्तिक १४ गते</p>
+                                    </div>
+                                </div>
+                                <span class="font-semibold text-red-600">-रु. 1,200</span>
+                            </div>
+                            
+                            <!-- @COMPONENT: TransactionItem [Income] -->
+                            <div class="transaction-item flex items-center justify-between p-3 rounded-lg hover:bg-muted transition-colors duration-200" data-mock="true">
+                                <div class="flex items-center space-x-3">
+                                    <div class="w-10 h-10 bg-green-100 rounded-lg flex items-center justify-center">
+                                        <i class="fas fa-laptop text-green-600"></i>
+                                    </div>
+                                    <div>
+                                        <p class="font-medium text-foreground">Freelance</p>
+                                        <p class="text-sm text-muted-foreground">कार्तिक १३ गते</p>
+                                    </div>
+                                </div>
+                                <span class="font-semibold text-green-600">+रु. 25,000</span>
+                            </div>
+                            
+                            <!-- @COMPONENT: TransactionItem [Expense] -->
+                            <div class="transaction-item flex items-center justify-between p-3 rounded-lg hover:bg-muted transition-colors duration-200" data-mock="true">
+                                <div class="flex items-center space-x-3">
+                                    <div class="w-10 h-10 bg-red-100 rounded-lg flex items-center justify-center">
+                                        <i class="fas fa-shopping-bag text-red-600"></i>
+                                    </div>
+                                    <div>
+                                        <p class="font-medium text-foreground">Shopping</p>
+                                        <p class="text-sm text-muted-foreground">कार्तिक १२ गते</p>
+                                    </div>
+                                </div>
+                                <span class="font-semibold text-red-600">-रु. 8,500</span>
+                            </div>
+                            
+                            <!-- @COMPONENT: TransactionItem [Expense] -->
+                            <div class="transaction-item flex items-center justify-between p-3 rounded-lg hover:bg-muted transition-colors duration-200" data-mock="true">
+                                <div class="flex items-center space-x-3">
+                                    <div class="w-10 h-10 bg-red-100 rounded-lg flex items-center justify-center">
+                                        <i class="fas fa-bolt text-red-600"></i>
+                                    </div>
+                                    <div>
+                                        <p class="font-medium text-foreground">Bills & Utilities</p>
+                                        <p class="text-sm text-muted-foreground">कार्तिक १० गते</p>
+                                    </div>
+                                </div>
+                                <span class="font-semibold text-red-600">-रु. 4,200</span>
+                            </div>
+                            
+                            <!-- @END_MAP )) -->
+                        </div>
+                    </div>
+                    <!-- @END_COMPONENT: RecentTransactions -->
+                </div>
+                <!-- @END_COMPONENT: ChartsAndTransactions -->
+                
+                <!-- @COMPONENT: QuickActions -->
+                <div class="bg-card rounded-lg border border-border p-6 shadow-sm">
+                    <h3 class="text-lg font-semibold text-foreground mb-4">Quick Actions</h3>
+                    <div class="grid grid-cols-1 md:grid-cols-4 gap-4">
+                        <!-- @COMPONENT: QuickActionButton [Add Income] -->
+                        <button class="flex items-center space-x-3 p-4 bg-green-50 hover:bg-green-100 rounded-lg border border-green-200 transition-colors duration-200">
+                            <i class="fas fa-plus text-green-600"></i>
+                            <span class="font-medium text-green-700">Add Income</span>
+                        </button>
+                        
+                        <!-- @COMPONENT: QuickActionButton [Add Expense] -->
+                        <button class="flex items-center space-x-3 p-4 bg-red-50 hover:bg-red-100 rounded-lg border border-red-200 transition-colors duration-200">
+                            <i class="fas fa-minus text-red-600"></i>
+                            <span class="font-medium text-red-700">Add Expense</span>
+                        </button>
+                        
+                        <!-- @COMPONENT: QuickActionButton [View Report] -->
+                        <button class="flex items-center space-x-3 p-4 bg-blue-50 hover:bg-blue-100 rounded-lg border border-blue-200 transition-colors duration-200">
+                            <i class="fas fa-chart-bar text-blue-600"></i>
+                            <span class="font-medium text-blue-700">View Report</span>
+                        </button>
+                        
+                        <!-- @COMPONENT: QuickActionButton [Export PDF] -->
+                        <button class="flex items-center space-x-3 p-4 bg-purple-50 hover:bg-purple-100 rounded-lg border border-purple-200 transition-colors duration-200">
+                            <i class="fas fa-download text-purple-600"></i>
+                            <span class="font-medium text-purple-700">Export PDF</span>
+                        </button>
+                    </div>
+                </div>
+                <!-- @END_COMPONENT: QuickActions -->
+            </div>
+            <!-- @END_COMPONENT: DashboardContent -->
+        </main>
+        <!-- @END_COMPONENT: MainContent -->
+    </div>
+    <!-- @END_COMPONENT: Layout -->
+    
+    <script>
+        // TODO: Implement React component state management and data binding
+        // TODO: Implement Bikram Sambat date conversion using bstojs package
+        // TODO: Implement Chart.js integration with real data
+        // TODO: Implement CRUD operations with local storage
+        // TODO: Implement React Router DOM navigation
+        // TODO: Implement Framer Motion animations
+        
+        (() => {
+            // Initialize Monthly Overview Chart
+            const monthlyCtx = document.getElementById('monthlyChart');
+            if (monthlyCtx) {
+                new Chart(monthlyCtx, {
+                    type: 'line',
+                    data: {
+                        labels: ['कार्तिक १', 'कार्तिक ५', 'कार्तिक १०', 'कार्तिक १५', 'कार्तिक २०', 'कार्तिक २५', 'कार्तिक ३०'],
+                        datasets: [{
+                            label: 'Income',
+                            data: [20000, 35000, 25000, 85000, 30000, 40000, 35000],
+                            borderColor: 'hsl(142.1 76.2% 36.3%)',
+                            backgroundColor: 'hsla(142.1, 76.2%, 36.3%, 0.1)',
+                            tension: 0.4,
+                            fill: true
+                        }, {
+                            label: 'Expenses',
+                            data: [15000, 12000, 8000, 25000, 18000, 22000, 15000],
+                            borderColor: 'hsl(0 72.2% 50.6%)',
+                            backgroundColor: 'hsla(0, 72.2%, 50.6%, 0.1)',
+                            tension: 0.4,
+                            fill: true
+                        }]
+                    },
+                    options: {
+                        responsive: true,
+                        maintainAspectRatio: false,
+                        plugins: {
+                            legend: {
+                                position: 'top',
+                            }
+                        },
+                        scales: {
+                            y: {
+                                beginAtZero: true,
+                                ticks: {
+                                    callback: function(value) {
+                                        return 'रु. ' + value.toLocaleString();
+                                    }
+                                }
+                            }
+                        }
+                    }
+                });
+            }
+            
+            // Initialize Category Breakdown Chart
+            const categoryCtx = document.getElementById('categoryChart');
+            if (categoryCtx) {
+                new Chart(categoryCtx, {
+                    type: 'doughnut',
+                    data: {
+                        labels: ['Food & Dining', 'Transportation', 'Shopping', 'Bills & Utilities', 'Entertainment', 'Healthcare'],
+                        datasets: [{
+                            data: [25000, 15000, 18000, 12000, 8000, 6000],
+                            backgroundColor: [
+                                'hsl(217.2 91% 59.8%)',
+                                'hsl(173.4 80% 36.1%)',
+                                'hsl(197.4 73.7% 51.8%)',
+                                'hsl(43.3 96.4% 56.3%)',
+                                'hsl(27.8 95.8% 53.3%)',
+                                'hsl(262.1 83.3% 57.8%)'
+                            ],
+                            borderWidth: 0
+                        }]
+                    },
+                    options: {
+                        responsive: true,
+                        maintainAspectRatio: false,
+                        plugins: {
+                            legend: {
+                                position: 'bottom',
+                            }
+                        }
+                    }
+                });
+            }
+        })();
+    </script>
+</body>
+</html>

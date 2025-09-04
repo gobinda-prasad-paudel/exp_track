@@ -1,6 +1,20 @@
 import { createContext, useContext, useState, useEffect, ReactNode } from "react";
-import { User } from "@shared/schema";
-import { authAPI } from "@/lib/api";
+import axios from "axios";
+
+// Setup axios instance
+const api = axios.create({
+  baseURL: "/api/auth", // backend route prefix
+  withCredentials: true,
+});
+
+// Define user type
+interface User {
+  id: string;
+  username: string;
+  email: string;
+  firstName: string;
+  lastName: string;
+}
 
 interface AuthContextType {
   user: User | null;
@@ -21,25 +35,27 @@ const AuthContext = createContext<AuthContextType | undefined>(undefined);
 export function AuthProvider({ children }: { children: ReactNode }) {
   const [user, setUser] = useState<User | null>(null);
 
+  // Check existing session
   useEffect(() => {
-    // Check for existing session on mount
-    const token = localStorage.getItem('token');
-    const userData = localStorage.getItem('user');
-    
+    const token = localStorage.getItem("token");
+    const userData = localStorage.getItem("user");
+
     if (token && userData) {
       try {
         const parsedUser = JSON.parse(userData);
         setUser(parsedUser);
-        
-        // Verify token is still valid
-        authAPI.getMe().catch(() => {
-          localStorage.removeItem('token');
-          localStorage.removeItem('user');
+
+        // Verify token with backend
+        api.get("/me", {
+          headers: { Authorization: `Bearer ${token}` },
+        }).catch(() => {
+          localStorage.removeItem("token");
+          localStorage.removeItem("user");
           setUser(null);
         });
-      } catch (error) {
-        localStorage.removeItem('token');
-        localStorage.removeItem('user');
+      } catch {
+        localStorage.removeItem("token");
+        localStorage.removeItem("user");
         setUser(null);
       }
     }
@@ -47,16 +63,16 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
   const login = async (email: string, password: string): Promise<boolean> => {
     try {
-      const response = await authAPI.login(email, password);
-      if (response.success) {
-        localStorage.setItem('token', response.token);
-        localStorage.setItem('user', JSON.stringify(response.user));
-        setUser(response.user);
+      const res = await api.post("/login", { email, password });
+      if (res.data.success) {
+        localStorage.setItem("token", res.data.token);
+        localStorage.setItem("user", JSON.stringify(res.data.user));
+        setUser(res.data.user);
         return true;
       }
       return false;
-    } catch (error) {
-      console.error('Login error:', error);
+    } catch (err) {
+      console.error("Login error:", err);
       return false;
     }
   };
@@ -69,23 +85,23 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     lastName: string;
   }): Promise<boolean> => {
     try {
-      const response = await authAPI.register(userData);
-      if (response.success) {
-        localStorage.setItem('token', response.token);
-        localStorage.setItem('user', JSON.stringify(response.user));
-        setUser(response.user);
+      const res = await api.post("/register", userData);
+      if (res.data.success) {
+        localStorage.setItem("token", res.data.token);
+        localStorage.setItem("user", JSON.stringify(res.data.user));
+        setUser(res.data.user);
         return true;
       }
       return false;
-    } catch (error) {
-      console.error('Registration error:', error);
+    } catch (err) {
+      console.error("Registration error:", err);
       return false;
     }
   };
 
   const logout = () => {
-    localStorage.removeItem('token');
-    localStorage.removeItem('user');
+    localStorage.removeItem("token");
+    localStorage.removeItem("user");
     setUser(null);
   };
 
@@ -106,8 +122,6 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
 export function useAuth() {
   const context = useContext(AuthContext);
-  if (context === undefined) {
-    throw new Error("useAuth must be used within an AuthProvider");
-  }
+  if (!context) throw new Error("useAuth must be used within an AuthProvider");
   return context;
 }

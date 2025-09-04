@@ -92,7 +92,7 @@ export default function Income() {
                 रु. {totalIncome.toLocaleString()}
               </div>
             </div>
-            <Button 
+            <Button
               onClick={() => setShowForm(!showForm)}
               data-testid="button-add-income"
               className="bg-green-600 hover:bg-green-700"

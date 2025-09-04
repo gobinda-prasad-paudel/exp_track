@@ -10,10 +10,10 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Checkbox } from "@/components/ui/checkbox";
 import { useToast } from "@/hooks/use-toast";
-import { 
-  Download, 
-  FileText, 
-  Calendar, 
+import {
+  Download,
+  FileText,
+  Calendar,
   Filter,
   TrendingUp,
   TrendingDown,
@@ -28,7 +28,7 @@ export default function ExportPDF() {
   const [filteredTransactions, setFilteredTransactions] = useState<Transaction[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [isExporting, setIsExporting] = useState(false);
-  
+
   // Filter states
   const [dateFrom, setDateFrom] = useState("");
   const [dateTo, setDateTo] = useState("");
@@ -96,7 +96,7 @@ export default function ExportPDF() {
     const totalIncome = filteredTransactions
       .filter(t => t.type === "income")
       .reduce((sum, t) => sum + t.amount, 0);
-    
+
     const totalExpenses = filteredTransactions
       .filter(t => t.type === "expense")
       .reduce((sum, t) => sum + t.amount, 0);
@@ -124,10 +124,10 @@ export default function ExportPDF() {
     try {
       const stats = getExportStats();
       const doc = await generateTransactionsPDF(filteredTransactions, stats);
-      
+
       const filename = `expense-report-${new Date().toISOString().split('T')[0]}.pdf`;
       downloadPDF(doc, filename);
-      
+
       toast({
         title: "Success",
         description: `PDF exported successfully with ${filteredTransactions.length} transactions`,

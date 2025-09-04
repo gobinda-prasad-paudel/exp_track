@@ -3,7 +3,7 @@ import { motion } from "framer-motion";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
-import { useAuth } from "@/hooks/useAuth";
+import { useAuth } from "@/lib/constants";
 import { storageService } from "@/lib/storage";
 import { getCurrentBSDateString } from "@/lib/date-utils";
 import { Button } from "@/components/ui/button";
@@ -13,12 +13,12 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Separator } from "@/components/ui/separator";
 import { Badge } from "@/components/ui/badge";
 import { useToast } from "@/hooks/use-toast";
-import { 
-  User, 
-  Mail, 
-  Calendar, 
-  BarChart3, 
-  TrendingUp, 
+import {
+  User,
+  Mail,
+  Calendar,
+  BarChart3,
+  TrendingUp,
   TrendingDown,
   Settings,
   Shield,
@@ -55,7 +55,7 @@ export default function Profile() {
     if (user) {
       const userStats = storageService.getUserStats(user.id);
       setStats(userStats);
-      
+
       // Reset form with current user data
       form.reset({
         firstName: user.firstName,
@@ -107,7 +107,7 @@ export default function Profile() {
         stats: stats,
         exportDate: new Date().toISOString(),
       };
-      
+
       const blob = new Blob([JSON.stringify(userData, null, 2)], { type: 'application/json' });
       const url = URL.createObjectURL(blob);
       const a = document.createElement('a');
@@ -117,7 +117,7 @@ export default function Profile() {
       a.click();
       document.body.removeChild(a);
       URL.revokeObjectURL(url);
-      
+
       toast({
         title: "Data exported",
         description: "Your data has been exported successfully.",

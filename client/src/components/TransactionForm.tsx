@@ -3,7 +3,7 @@ import { motion } from "framer-motion";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
-import { Transaction, InsertTransaction } from "@shared/schema";
+import axios from "axios";
 import { INCOME_CATEGORIES, EXPENSE_CATEGORIES } from "@/lib/constants";
 import { formatDateForInput } from "@/lib/date-utils";
 import { Button } from "@/components/ui/button";
@@ -13,6 +13,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { useToast } from "@/hooks/use-toast";
+import { useAuth } from "@/hooks/useAuth";
 
 const transactionFormSchema = z.object({
   type: z.enum(["income", "expense"]),
@@ -25,20 +26,21 @@ const transactionFormSchema = z.object({
 type TransactionFormData = z.infer<typeof transactionFormSchema>;
 
 interface TransactionFormProps {
-  transaction?: Transaction;
-  onSubmit: (data: InsertTransaction) => Promise<void>;
+  transaction?: any; // replace with backend Transaction type if you generate one
+  onSuccess?: () => void;
   onCancel?: () => void;
   isEditing?: boolean;
 }
 
-export function TransactionForm({ 
-  transaction, 
-  onSubmit, 
-  onCancel, 
-  isEditing = false 
+export function TransactionForm({
+  transaction,
+  onSuccess,
+  onCancel,
+  isEditing = false
 }: TransactionFormProps) {
   const [isSubmitting, setIsSubmitting] = useState(false);
   const { toast } = useToast();
+  const { user } = useAuth();
 
   const form = useForm<TransactionFormData>({
     resolver: zodResolver(transactionFormSchema),
@@ -57,20 +59,29 @@ export function TransactionForm({
   const handleSubmit = async (data: TransactionFormData) => {
     setIsSubmitting(true);
     try {
-      await onSubmit(data);
-      if (!isEditing) {
-        form.reset();
+      if (isEditing && transaction?._id) {
+        // Update transaction
+        await axios.put(`/api/transactions/${transaction._id}`, data, {
+          headers: { Authorization: `Bearer ${localStorage.getItem("token")}` }
+        });
+        toast({
+          title: "Success",
+          description: "Transaction updated successfully",
+        });
+      } else {
+        // Create transaction
+        await axios.post("/api/transactions", data, {
+          headers: { Authorization: `Bearer ${localStorage.getItem("token")}` }
+        });
         toast({
           title: "Success",
           description: "Transaction added successfully",
         });
-      } else {
-        toast({
-          title: "Success", 
-          description: "Transaction updated successfully",
-        });
+        form.reset();
       }
+      if (onSuccess) onSuccess();
     } catch (error) {
+      console.error(error);
       toast({
         title: "Error",
         description: "Failed to save transaction",
@@ -96,10 +107,11 @@ export function TransactionForm({
         <CardContent>
           <form onSubmit={form.handleSubmit(handleSubmit)} className="space-y-4">
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              {/* Type */}
               <div className="space-y-2">
                 <Label htmlFor="type">Type</Label>
-                <Select 
-                  value={form.watch("type")} 
+                <Select
+                  value={form.watch("type")}
                   onValueChange={(value) => form.setValue("type", value as "income" | "expense")}
                   data-testid="select-type"
                 >
@@ -116,6 +128,7 @@ export function TransactionForm({
                 )}
               </div>
 
+              {/* Amount */}
               <div className="space-y-2">
                 <Label htmlFor="amount">Amount (रु.)</Label>
                 <Input
@@ -130,11 +143,12 @@ export function TransactionForm({
               </div>
             </div>
 
+            {/* Category & Date */}
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               <div className="space-y-2">
                 <Label htmlFor="category">Category</Label>
-                <Select 
-                  value={form.watch("category")} 
+                <Select
+                  value={form.watch("category")}
                   onValueChange={(value) => form.setValue("category", value)}
                   data-testid="select-category"
                 >
@@ -167,6 +181,7 @@ export function TransactionForm({
               </div>
             </div>
 
+            {/* Description */}
             <div className="space-y-2">
               <Label htmlFor="description">Description (Optional)</Label>
               <Textarea
@@ -176,14 +191,15 @@ export function TransactionForm({
               />
             </div>
 
+            {/* Actions */}
             <div className="flex justify-end space-x-2">
               {onCancel && (
                 <Button type="button" variant="outline" onClick={onCancel} data-testid="button-cancel">
                   Cancel
                 </Button>
               )}
-              <Button 
-                type="submit" 
+              <Button
+                type="submit"
                 disabled={isSubmitting}
                 data-testid="button-submit"
               >

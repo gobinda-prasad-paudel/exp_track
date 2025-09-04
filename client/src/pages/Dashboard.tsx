@@ -1,24 +1,25 @@
 import { useEffect, useState } from "react";
 import { motion } from "framer-motion";
 import { Link } from "wouter";
+import axios from "axios";
 import { useAuth } from "@/hooks/useAuth";
-import { storageService } from "@/lib/storage";
 import { getCurrentBSDateString } from "@/lib/date-utils";
 import { StatCard } from "@/components/StatCard";
-import { TransactionList } from "@/components/TransactionList";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { 
-  Wallet, 
-  TrendingUp, 
-  TrendingDown, 
-  List, 
-  Plus, 
-  Minus, 
-  BarChart3, 
-  Download 
+import {
+  Wallet,
+  TrendingUp,
+  TrendingDown,
+  List,
+  Plus,
+  Minus,
+  BarChart3,
+  Download
 } from "lucide-react";
+import type { LucideIcon } from "lucide-react";
+
 
 export default function Dashboard() {
   const { user } = useAuth();
@@ -26,11 +27,24 @@ export default function Dashboard() {
   const [isLoading, setIsLoading] = useState(true);
 
   useEffect(() => {
-    if (user) {
-      const userStats = storageService.getUserStats(user.id);
-      setStats(userStats);
-      setIsLoading(false);
-    }
+    const fetchStats = async () => {
+      try {
+        if (!user) return;
+
+        const token = localStorage.getItem("token");
+        const res = await axios.get(`/api/stats/${user.id}`, {
+          headers: { Authorization: `Bearer ${token}` }
+        });
+
+        setStats(res.data); // backend should return same structure as before
+      } catch (err) {
+        console.error("Error fetching dashboard stats:", err);
+      } finally {
+        setIsLoading(false);
+      }
+    };
+
+    fetchStats();
   }, [user]);
 
   if (isLoading || !stats) {
@@ -54,18 +68,14 @@ export default function Dashboard() {
       >
         <div className="flex items-center justify-between">
           <div>
-            <h2 className="text-2xl font-semibold text-foreground" data-testid="text-dashboard-title">
-              Dashboard
-            </h2>
+            <h2 className="text-2xl font-semibold text-foreground">Dashboard</h2>
             <p className="text-muted-foreground">Welcome back! Here's your financial overview</p>
           </div>
           <div className="flex items-center space-x-4">
-            <div className="text-sm text-muted-foreground" data-testid="text-current-date">
-              {getCurrentBSDateString()}
-            </div>
+            <div className="text-sm text-muted-foreground">{getCurrentBSDateString()}</div>
             {user && (
               <div className="w-8 h-8 bg-primary rounded-full flex items-center justify-center">
-                <span className="text-primary-foreground text-sm font-medium" data-testid="text-user-initials">
+                <span className="text-primary-foreground text-sm font-medium">
                   {user.firstName[0]}{user.lastName[0]}
                 </span>
               </div>
@@ -83,9 +93,8 @@ export default function Dashboard() {
             change="+12.5%"
             changeType="positive"
             icon={Wallet}
-            testId="stat-total-balance"
           />
-          
+
           <StatCard
             title="Total Income"
             value={`रु. ${stats.totalIncome.toLocaleString()}`}
@@ -94,20 +103,18 @@ export default function Dashboard() {
             icon={TrendingUp}
             iconBgColor="bg-green-100"
             iconColor="text-green-600"
-            testId="stat-total-income"
           />
-          
+
           <StatCard
             title="Total Expenses"
             value={`रु. ${stats.totalExpenses.toLocaleString()}`}
             change="-3.1%"
-            changeType="positive"
+            changeType="negative"
             icon={TrendingDown}
             iconBgColor="bg-red-100"
             iconColor="text-red-600"
-            testId="stat-total-expenses"
           />
-          
+
           <StatCard
             title="Transactions"
             value={stats.totalTransactions.toString()}
@@ -116,7 +123,6 @@ export default function Dashboard() {
             icon={List}
             iconBgColor="bg-blue-100"
             iconColor="text-blue-600"
-            testId="stat-total-transactions"
           />
         </div>
 
@@ -207,11 +213,10 @@ export default function Dashboard() {
                       >
                         <div className="flex items-center space-x-3">
                           <div
-                            className={`w-8 h-8 rounded-lg flex items-center justify-center ${
-                              transaction.type === "income"
-                                ? "bg-green-100 text-green-600"
-                                : "bg-red-100 text-red-600"
-                            }`}
+                            className={`w-8 h-8 rounded-lg flex items-center justify-center ${transaction.type === "income"
+                              ? "bg-green-100 text-green-600"
+                              : "bg-red-100 text-red-600"
+                              }`}
                           >
                             {transaction.type === "income" ? (
                               <TrendingUp className="h-4 w-4" />
@@ -225,9 +230,8 @@ export default function Dashboard() {
                           </div>
                         </div>
                         <span
-                          className={`text-sm font-semibold ${
-                            transaction.type === "income" ? "text-green-600" : "text-red-600"
-                          }`}
+                          className={`text-sm font-semibold ${transaction.type === "income" ? "text-green-600" : "text-red-600"
+                            }`}
                         >
                           {transaction.type === "income" ? "+" : "-"}रु. {transaction.amount.toLocaleString()}
                         </span>
