@@ -1,6 +1,6 @@
 import { createContext, useContext, useState, useEffect, ReactNode } from "react";
 import { User } from "@shared/schema";
-import { storageService } from "@/lib/storage";
+import { authAPI } from "@/lib/api";
 
 interface AuthContextType {
   user: User | null;
@@ -23,20 +23,42 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
   useEffect(() => {
     // Check for existing session on mount
-    const currentUser = storageService.getCurrentUser();
-    if (currentUser) {
-      setUser(currentUser);
+    const token = localStorage.getItem('token');
+    const userData = localStorage.getItem('user');
+    
+    if (token && userData) {
+      try {
+        const parsedUser = JSON.parse(userData);
+        setUser(parsedUser);
+        
+        // Verify token is still valid
+        authAPI.getMe().catch(() => {
+          localStorage.removeItem('token');
+          localStorage.removeItem('user');
+          setUser(null);
+        });
+      } catch (error) {
+        localStorage.removeItem('token');
+        localStorage.removeItem('user');
+        setUser(null);
+      }
     }
   }, []);
 
   const login = async (email: string, password: string): Promise<boolean> => {
-    const success = await storageService.loginUser(email, password);
-    if (success) {
-      const currentUser = storageService.getCurrentUser();
-      setUser(currentUser);
-      return true;
+    try {
+      const response = await authAPI.login(email, password);
+      if (response.success) {
+        localStorage.setItem('token', response.token);
+        localStorage.setItem('user', JSON.stringify(response.user));
+        setUser(response.user);
+        return true;
+      }
+      return false;
+    } catch (error) {
+      console.error('Login error:', error);
+      return false;
     }
-    return false;
   };
 
   const register = async (userData: {
@@ -46,16 +68,24 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     firstName: string;
     lastName: string;
   }): Promise<boolean> => {
-    const newUser = await storageService.createUser(userData);
-    if (newUser) {
-      setUser(newUser);
-      return true;
+    try {
+      const response = await authAPI.register(userData);
+      if (response.success) {
+        localStorage.setItem('token', response.token);
+        localStorage.setItem('user', JSON.stringify(response.user));
+        setUser(response.user);
+        return true;
+      }
+      return false;
+    } catch (error) {
+      console.error('Registration error:', error);
+      return false;
     }
-    return false;
   };
 
   const logout = () => {
-    storageService.logoutUser();
+    localStorage.removeItem('token');
+    localStorage.removeItem('user');
     setUser(null);
   };
 
