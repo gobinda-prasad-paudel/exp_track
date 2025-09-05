@@ -1,13 +1,11 @@
 import { createContext, useContext, useState, useEffect, ReactNode } from "react";
 import axios from "axios";
 
-// Setup axios instance
 const api = axios.create({
-  baseURL: "/api/auth", // backend route prefix
+  baseURL: "/api/auth",
   withCredentials: true,
 });
 
-// Define user type
 interface User {
   id: string;
   username: string;
@@ -27,38 +25,55 @@ interface AuthContextType {
     lastName: string;
   }) => Promise<boolean>;
   logout: () => void;
+  checkAuth: () => Promise<void>;
   isAuthenticated: boolean;
+  loading: boolean;
 }
 
-const AuthContext = createContext<AuthContextType | undefined>(undefined);
+export const AuthContext = createContext<AuthContextType | undefined>(undefined);
 
 export function AuthProvider({ children }: { children: ReactNode }) {
   const [user, setUser] = useState<User | null>(null);
+  const [isAuthenticated, setIsAuthenticated] = useState(false);
+  const [loading, setLoading] = useState(true);
 
-  // Check existing session
-  useEffect(() => {
+  const checkAuth = async () => {
     const token = localStorage.getItem("token");
     const userData = localStorage.getItem("user");
 
     if (token && userData) {
-      try {
-        const parsedUser = JSON.parse(userData);
-        setUser(parsedUser);
+      const parsedUser = JSON.parse(userData);
 
-        // Verify token with backend
-        api.get("/me", {
+      try {
+        const res = await api.get("/me", {
           headers: { Authorization: `Bearer ${token}` },
-        }).catch(() => {
+        });
+
+        if (res.data.success) {
+          setUser(parsedUser);
+          setIsAuthenticated(true);
+        } else {
           localStorage.removeItem("token");
           localStorage.removeItem("user");
           setUser(null);
-        });
-      } catch {
+          setIsAuthenticated(false);
+        }
+      } catch (err) {
         localStorage.removeItem("token");
         localStorage.removeItem("user");
         setUser(null);
+        setIsAuthenticated(false);
+      } finally {
+        setLoading(false);
       }
+    } else {
+      setLoading(false);
+      setIsAuthenticated(false);
     }
+  };
+
+  useEffect(() => {
+    checkAuth(); // ✅ run once on mount
   }, []);
 
   const login = async (email: string, password: string): Promise<boolean> => {
@@ -68,6 +83,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         localStorage.setItem("token", res.data.token);
         localStorage.setItem("user", JSON.stringify(res.data.user));
         setUser(res.data.user);
+        setIsAuthenticated(true);
         return true;
       }
       return false;
@@ -90,6 +106,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         localStorage.setItem("token", res.data.token);
         localStorage.setItem("user", JSON.stringify(res.data.user));
         setUser(res.data.user);
+        setIsAuthenticated(true);
         return true;
       }
       return false;
@@ -103,6 +120,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     localStorage.removeItem("token");
     localStorage.removeItem("user");
     setUser(null);
+    setIsAuthenticated(false);
   };
 
   return (
@@ -112,7 +130,9 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         login,
         register,
         logout,
-        isAuthenticated: !!user,
+        checkAuth,
+        isAuthenticated,
+        loading,
       }}
     >
       {children}
@@ -125,3 +145,4 @@ export function useAuth() {
   if (!context) throw new Error("useAuth must be used within an AuthProvider");
   return context;
 }
+

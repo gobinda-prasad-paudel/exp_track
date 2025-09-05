@@ -1,10 +1,10 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { motion } from "framer-motion";
 import { Link, useLocation } from "wouter";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
-import { useAuth } from "@/lib/constants";
+import { useAuth } from "@/context/AuthContext";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -22,7 +22,7 @@ type LoginFormData = z.infer<typeof loginSchema>;
 export default function Login() {
   const [, setLocation] = useLocation();
   const { login, isAuthenticated } = useAuth();
-  const { toast } = useToast();
+  // const { toast } = useuseToast();
   const [isLoading, setIsLoading] = useState(false);
   const [showPassword, setShowPassword] = useState(false);
 
@@ -35,30 +35,35 @@ export default function Login() {
   });
 
   // Redirect if already authenticated
-  if (isAuthenticated) {
-    setLocation("/dashboard");
-    return null;
-  }
+  useEffect(() => {
+    if (isAuthenticated) {
+      setLocation("/dashboard");
+    }
+    console.log("IsAuthnticated value changed", isAuthenticated)
+  }, [isAuthenticated]);
 
   const onSubmit = async (data: LoginFormData) => {
     setIsLoading(true);
     try {
       const success = await login(data.email, data.password);
+      console.log("From login page directly", success)
       if (success) {
-        toast({
+        useToast({
           title: "Welcome back!",
           description: "You have been logged in successfully.",
+          variant: "success"
         });
         setLocation("/dashboard");
+
       } else {
-        toast({
+        useToast({
           title: "Login Failed",
           description: "Invalid email or password. Please try again.",
           variant: "destructive",
         });
       }
     } catch (error) {
-      toast({
+      useToast({
         title: "Error",
         description: "An unexpected error occurred. Please try again.",
         variant: "destructive",

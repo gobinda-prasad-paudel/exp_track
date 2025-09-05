@@ -1,11 +1,20 @@
 import { useState } from "react";
 import { motion, AnimatePresence } from "framer-motion";
-import { Transaction } from "@shared/schema";
 import { CATEGORY_ICONS } from "@/lib/constants";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Edit, Trash2, TrendingUp, TrendingDown } from "lucide-react";
+
+export interface Transaction {
+  _id: string;              // backend id (MongoDB style)
+  type: "income" | "expense";
+  amount: number;
+  category: string;
+  description?: string;
+  date: string;             // ISO string from backend
+  bsDate?: string;          // optional if your backend sends BS date
+}
 
 interface TransactionListProps {
   transactions: Transaction[];
@@ -69,21 +78,21 @@ export function TransactionList({
           <AnimatePresence mode="popLayout">
             {displayTransactions.map((transaction, index) => (
               <motion.div
-                key={transaction.id}
+                key={transaction._id}
                 initial={{ opacity: 0, y: 20 }}
                 animate={{ opacity: 1, y: 0 }}
                 exit={{ opacity: 0, x: -100 }}
                 transition={{ duration: 0.2, delay: index * 0.05 }}
                 className="transaction-item flex items-center justify-between p-4 rounded-lg border border-border hover:bg-muted transition-colors duration-200"
-                data-testid={`transaction-item-${transaction.id}`}
+                data-testid={`transaction-item-${transaction._id}`}
               >
+                {/* Left section (icon + details) */}
                 <div className="flex items-center space-x-4">
                   <div
-                    className={`w-10 h-10 rounded-lg flex items-center justify-center ${
-                      transaction.type === "income"
-                        ? "bg-green-100 text-green-600"
-                        : "bg-red-100 text-red-600"
-                    }`}
+                    className={`w-10 h-10 rounded-lg flex items-center justify-center ${transaction.type === "income"
+                      ? "bg-green-100 text-green-600"
+                      : "bg-red-100 text-red-600"
+                      }`}
                   >
                     {transaction.type === "income" ? (
                       <TrendingUp className="h-5 w-5" />
@@ -93,33 +102,43 @@ export function TransactionList({
                   </div>
                   <div className="min-w-0">
                     <div className="flex items-center space-x-2">
-                      <p className="font-medium text-foreground truncate" data-testid={`text-category-${transaction.id}`}>
+                      <p
+                        className="font-medium text-foreground truncate"
+                        data-testid={`text-category-${transaction._id}`}
+                      >
                         {transaction.category}
                       </p>
-                      <Badge 
+                      <Badge
                         variant={transaction.type === "income" ? "default" : "secondary"}
-                        data-testid={`badge-type-${transaction.id}`}
+                        data-testid={`badge-type-${transaction._id}`}
                       >
                         {transaction.type}
                       </Badge>
                     </div>
-                    <p className="text-sm text-muted-foreground truncate" data-testid={`text-description-${transaction.id}`}>
+                    <p
+                      className="text-sm text-muted-foreground truncate"
+                      data-testid={`text-description-${transaction._id}`}
+                    >
                       {transaction.description || "No description"}
                     </p>
-                    <p className="text-sm text-muted-foreground" data-testid={`text-date-${transaction.id}`}>
-                      {transaction.bsDate} • {new Date(transaction.date).toLocaleDateString()}
+                    <p
+                      className="text-sm text-muted-foreground"
+                      data-testid={`text-date-${transaction._id}`}
+                    >
+                      {transaction.bsDate || ""} • {new Date(transaction.date).toLocaleDateString()}
                     </p>
                   </div>
                 </div>
 
+                {/* Right section (amount + actions) */}
                 <div className="flex items-center space-x-3">
                   <span
-                    className={`font-semibold text-lg ${
-                      transaction.type === "income" ? "text-green-600" : "text-red-600"
-                    }`}
-                    data-testid={`text-amount-${transaction.id}`}
+                    className={`font-semibold text-lg ${transaction.type === "income" ? "text-green-600" : "text-red-600"
+                      }`}
+                    data-testid={`text-amount-${transaction._id}`}
                   >
-                    {transaction.type === "income" ? "+" : "-"}रु. {transaction.amount.toLocaleString()}
+                    {transaction.type === "income" ? "+" : "-"}रु.{" "}
+                    {transaction.amount.toLocaleString()}
                   </span>
 
                   {showActions && (
@@ -128,7 +147,7 @@ export function TransactionList({
                         size="sm"
                         variant="ghost"
                         onClick={() => onEdit?.(transaction)}
-                        data-testid={`button-edit-${transaction.id}`}
+                        data-testid={`button-edit-${transaction._id}`}
                       >
                         <Edit className="h-4 w-4" />
                       </Button>
@@ -136,15 +155,15 @@ export function TransactionList({
                         size="sm"
                         variant="ghost"
                         className={
-                          deleteConfirm === transaction.id
+                          deleteConfirm === transaction._id
                             ? "text-destructive hover:text-destructive"
                             : ""
                         }
-                        onClick={() => handleDelete(transaction.id)}
-                        data-testid={`button-delete-${transaction.id}`}
+                        onClick={() => handleDelete(transaction._id)}
+                        data-testid={`button-delete-${transaction._id}`}
                       >
                         <Trash2 className="h-4 w-4" />
-                        {deleteConfirm === transaction.id && (
+                        {deleteConfirm === transaction._id && (
                           <span className="ml-1 text-xs">Confirm?</span>
                         )}
                       </Button>

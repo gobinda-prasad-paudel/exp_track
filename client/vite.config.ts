@@ -16,7 +16,7 @@ export default defineConfig({
     open: true,
     proxy: {
       "/api": {
-        target: "http://localhost:5000", // your backend Express server
+        target: "http://localhost:5001", // your backend Express server
         changeOrigin: true,
       },
     },

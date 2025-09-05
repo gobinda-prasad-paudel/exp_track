@@ -3,9 +3,8 @@ import { motion } from "framer-motion";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
-import { useAuth } from "@/lib/constants";
-import { storageService } from "@/lib/storage";
 import { getCurrentBSDateString } from "@/lib/date-utils";
+import axios from "axios";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -22,8 +21,9 @@ import {
   TrendingDown,
   Settings,
   Shield,
-  Download
+  Download,
 } from "lucide-react";
+import { useAuth } from "@/context/AuthContext";
 
 const profileSchema = z.object({
   firstName: z.string().min(1, "First name is required"),
@@ -35,49 +35,77 @@ const profileSchema = z.object({
 type ProfileFormData = z.infer<typeof profileSchema>;
 
 export default function Profile() {
-  const { user, logout } = useAuth();
-  const { toast } = useToast();
+  const { logout } = useAuth(); // ✅ only keep logout
+  const [user, setUser] = useState<any>(null);
+  const [stats, setStats] = useState<any>(null);
   const [isEditing, setIsEditing] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
-  const [stats, setStats] = useState<any>(null);
 
   const form = useForm<ProfileFormData>({
     resolver: zodResolver(profileSchema),
     defaultValues: {
-      firstName: user?.firstName || "",
-      lastName: user?.lastName || "",
-      username: user?.username || "",
-      email: user?.email || "",
+      firstName: "",
+      lastName: "",
+      username: "",
+      email: "",
     },
   });
 
+  // ✅ fetch user from backend
   useEffect(() => {
-    if (user) {
-      const userStats = storageService.getUserStats(user.id);
-      setStats(userStats);
+    const fetchUser = async () => {
+      try {
+        const token = localStorage.getItem("token");
+        const response = await axios.get(`/api/auth/me`, {
+          headers: { Authorization: `Bearer ${token}` },
+        });
+        const currentUser = response.data.user;
 
-      // Reset form with current user data
-      form.reset({
-        firstName: user.firstName,
-        lastName: user.lastName,
-        username: user.username,
-        email: user.email,
-      });
-    }
-  }, [user, form]);
+        setUser(currentUser);
+        setStats("userStats"); // replace with real stats later
+        form.reset({
+          firstName: currentUser.firstName,
+          lastName: currentUser.lastName,
+          username: currentUser.username,
+          email: currentUser.email,
+        });
+        console.log("User", currentUser)
+      } catch (err) {
+        console.error("Failed to fetch user", err);
+      }
+    };
+    fetchUser();
+  }, [form]);
 
   const onSubmit = async (data: ProfileFormData) => {
     setIsLoading(true);
     try {
-      // In a real app, this would update the user in the backend
-      // For now, we'll just show a success message since it's frontend-only
-      toast({
+      const token = localStorage.getItem("token");
+
+      const response = await axios.put(`/api/auth/me`, data, {
+        headers: { Authorization: `Bearer ${token}` },
+      });
+
+      const updatedUser = response.data.user;
+      setUser(updatedUser);
+
+      form.reset({
+        firstName: updatedUser.firstName,
+        lastName: updatedUser.lastName,
+        username: updatedUser.username,
+        email: updatedUser.email,
+      });
+
+      useToast({
         title: "Profile updated!",
         description: "Your profile information has been updated successfully.",
+        variant: "success",
       });
+
       setIsEditing(false);
     } catch (error) {
-      toast({
+      console.error("Update failed:", error);
+      useToast({
         title: "Update failed",
         description: "Failed to update profile. Please try again.",
         variant: "destructive",
@@ -99,37 +127,48 @@ export default function Profile() {
     }
   };
 
-  const handleDataExport = () => {
-    if (user) {
-      const userData = {
-        profile: user,
-        transactions: storageService.getUserTransactions(user.id),
-        stats: stats,
-        exportDate: new Date().toISOString(),
-      };
+  const handleDataExport = async () => {
+    if (!user) return;
+    try {
+      const response = await axios.post(
+        "/api/export/json",
+        { userId: user.id },
+        { responseType: "blob" }
+      );
 
-      const blob = new Blob([JSON.stringify(userData, null, 2)], { type: 'application/json' });
+      const blob = new Blob([response.data], { type: "application/json" });
       const url = URL.createObjectURL(blob);
-      const a = document.createElement('a');
+      const a = document.createElement("a");
       a.href = url;
-      a.download = `expense-tracker-data-${new Date().toISOString().split('T')[0]}.json`;
+      a.download = `expense-tracker-data-${new Date()
+        .toISOString()
+        .split("T")[0]}.json`;
       document.body.appendChild(a);
       a.click();
       document.body.removeChild(a);
       URL.revokeObjectURL(url);
 
-      toast({
+      useToast({
         title: "Data exported",
         description: "Your data has been exported successfully.",
+        variant: "success",
+      });
+    } catch (err) {
+      console.error("Export error:", err);
+      useToast({
+        title: "Export failed",
+        description: "Could not export your data.",
+        variant: "destructive",
       });
     }
   };
 
   const handleLogout = () => {
     logout();
-    toast({
+    useToast({
       title: "Logged out",
       description: "You have been logged out successfully.",
+      varient: "success"
     });
   };
 
@@ -137,7 +176,9 @@ export default function Profile() {
     return (
       <div className="flex items-center justify-center h-full">
         <div className="text-center">
-          <div className="text-lg text-muted-foreground">Loading profile...</div>
+          <div className="text-lg text-muted-foreground">
+            Loading profile...
+          </div>
         </div>
       </div>
     );
@@ -165,7 +206,7 @@ export default function Profile() {
             </Badge>
             <div className="w-10 h-10 bg-primary rounded-full flex items-center justify-center">
               <span className="text-primary-foreground font-medium" data-testid="text-user-avatar">
-                {user.firstName[0]}{user.lastName[0]}
+                {user?.firstName[0]}{user?.lastName[0]}
               </span>
             </div>
           </div>
@@ -290,7 +331,7 @@ export default function Profile() {
                         <span className="text-sm font-medium text-muted-foreground">Full Name</span>
                       </div>
                       <p className="text-foreground font-medium" data-testid="text-full-name">
-                        {user.firstName} {user.lastName}
+                        {user?.firstName} {user?.lastName}
                       </p>
                     </div>
 
@@ -300,7 +341,7 @@ export default function Profile() {
                         <span className="text-sm font-medium text-muted-foreground">Email</span>
                       </div>
                       <p className="text-foreground font-medium" data-testid="text-email">
-                        {user.email}
+                        {user?.email}
                       </p>
                     </div>
 
@@ -310,7 +351,7 @@ export default function Profile() {
                         <span className="text-sm font-medium text-muted-foreground">Username</span>
                       </div>
                       <p className="text-foreground font-medium" data-testid="text-username">
-                        {user.username}
+                        {user?.username}
                       </p>
                     </div>
 
@@ -320,7 +361,7 @@ export default function Profile() {
                         <span className="text-sm font-medium text-muted-foreground">Member Since</span>
                       </div>
                       <p className="text-foreground font-medium" data-testid="text-member-since">
-                        {new Date(user.createdAt).toLocaleDateString()}
+                        {new Date(user?.dateOfJoin)?.toLocaleDateString()}
                       </p>
                     </div>
                   </div>
@@ -348,7 +389,7 @@ export default function Profile() {
                 <div className="text-center p-4 bg-gradient-to-r from-green-50 to-green-100 rounded-lg">
                   <TrendingUp className="h-8 w-8 text-green-600 mx-auto mb-2" />
                   <div className="text-2xl font-bold text-green-600" data-testid="text-total-income">
-                    रु. {stats.totalIncome.toLocaleString()}
+                    रु. {stats.totalIncome?.toLocaleString()}
                   </div>
                   <div className="text-sm text-green-700">Total Income</div>
                 </div>
@@ -356,7 +397,7 @@ export default function Profile() {
                 <div className="text-center p-4 bg-gradient-to-r from-red-50 to-red-100 rounded-lg">
                   <TrendingDown className="h-8 w-8 text-red-600 mx-auto mb-2" />
                   <div className="text-2xl font-bold text-red-600" data-testid="text-total-expenses">
-                    रु. {stats.totalExpenses.toLocaleString()}
+                    रु. {stats.totalExpenses?.toLocaleString()}
                   </div>
                   <div className="text-sm text-red-700">Total Expenses</div>
                 </div>
@@ -364,7 +405,7 @@ export default function Profile() {
                 <div className="text-center p-4 bg-gradient-to-r from-blue-50 to-blue-100 rounded-lg">
                   <BarChart3 className="h-8 w-8 text-blue-600 mx-auto mb-2" />
                   <div className={`text-2xl font-bold ${stats.totalBalance >= 0 ? 'text-green-600' : 'text-red-600'}`} data-testid="text-net-balance">
-                    रु. {stats.totalBalance.toLocaleString()}
+                    रु. {stats.totalBalance?.toLocaleString()}
                   </div>
                   <div className="text-sm text-blue-700">Net Balance</div>
                 </div>
@@ -375,21 +416,21 @@ export default function Profile() {
               <div className="grid grid-cols-1 md:grid-cols-3 gap-6 text-center">
                 <div>
                   <div className="text-lg font-semibold text-foreground" data-testid="text-total-transactions">
-                    {stats.totalTransactions}
+                    {stats?.totalTransactions}
                   </div>
                   <div className="text-sm text-muted-foreground">Total Transactions</div>
                 </div>
 
                 <div>
                   <div className="text-lg font-semibold text-foreground" data-testid="text-this-month-income">
-                    रु. {stats.thisMonthIncome.toLocaleString()}
+                    रु. {stats.thisMonthIncome?.toLocaleString()}
                   </div>
                   <div className="text-sm text-muted-foreground">This Month Income</div>
                 </div>
 
                 <div>
                   <div className="text-lg font-semibold text-foreground" data-testid="text-this-month-expenses">
-                    रु. {stats.thisMonthExpenses.toLocaleString()}
+                    रु. {stats.thisMonthExpenses?.toLocaleString()}
                   </div>
                   <div className="text-sm text-muted-foreground">This Month Expenses</div>
                 </div>

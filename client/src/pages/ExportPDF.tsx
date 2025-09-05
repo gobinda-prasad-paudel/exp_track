@@ -1,8 +1,6 @@
 import { useState, useEffect } from "react";
 import { motion } from "framer-motion";
-import { useAuth } from "@/hooks/useAuth";
-import { storageService } from "@/lib/storage";
-import { generateTransactionsPDF, downloadPDF } from "@/lib/pdf-utils";
+import { useAuth } from "@/context/AuthContext";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
@@ -10,20 +8,23 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Checkbox } from "@/components/ui/checkbox";
 import { useToast } from "@/hooks/use-toast";
-import {
-  Download,
-  FileText,
-  Calendar,
-  Filter,
-  TrendingUp,
-  TrendingDown,
-  BarChart3
-} from "lucide-react";
-import { Transaction } from "@shared/schema";
+import { Download, FileText, Filter, TrendingUp, TrendingDown, BarChart3 } from "lucide-react";
+import axios from "axios";
+
+// ✅ Define Transaction type locally
+interface Transaction {
+  _id: string;
+  userId: string;
+  amount: number;
+  type: "income" | "expense";
+  category: string;
+  date: string;
+  note?: string;
+}
 
 export default function ExportPDF() {
   const { user } = useAuth();
-  const { toast } = useToast();
+  // const { toast } = useToast();
   const [transactions, setTransactions] = useState<Transaction[]>([]);
   const [filteredTransactions, setFilteredTransactions] = useState<Transaction[]>([]);
   const [isLoading, setIsLoading] = useState(true);
@@ -38,6 +39,14 @@ export default function ExportPDF() {
   const [includeExpenses, setIncludeExpenses] = useState(true);
   const [includeSummary, setIncludeSummary] = useState(true);
 
+  // ✅ Add stats state
+  const [stats, setStats] = useState({
+    totalIncome: 0,
+    totalExpenses: 0,
+    totalBalance: 0,
+    totalTransactions: 0,
+  });
+
   useEffect(() => {
     if (user) {
       loadTransactions();
@@ -48,10 +57,27 @@ export default function ExportPDF() {
     filterTransactions();
   }, [transactions, dateFrom, dateTo, typeFilter, categoryFilter, includeIncome, includeExpenses]);
 
-  const loadTransactions = () => {
-    if (user) {
-      const userTransactions = storageService.getUserTransactions(user.id);
-      setTransactions(userTransactions.sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime()));
+  const loadTransactions = async () => {
+    if (!user) return;
+    try {
+      const res = await axios.get(`/api/transactions/${user.id}`);
+      const data: Transaction[] = res.data.sort(
+        (a, b) => new Date(b.date).getTime() - new Date(a.date).getTime()
+      );
+      setTransactions(data);
+
+      // update stats
+      const income = data.filter((t) => t.type === "income").reduce((sum, t) => sum + t.amount, 0);
+      const expenses = data.filter((t) => t.type === "expense").reduce((sum, t) => sum + t.amount, 0);
+      setStats({
+        totalIncome: income,
+        totalExpenses: expenses,
+        totalBalance: income - expenses,
+        totalTransactions: data.length,
+      });
+    } catch (err) {
+      console.error("Failed to load transactions", err);
+    } finally {
       setIsLoading(false);
     }
   };
@@ -59,60 +85,23 @@ export default function ExportPDF() {
   const filterTransactions = () => {
     let filtered = [...transactions];
 
-    // Filter by date range
-    if (dateFrom) {
-      filtered = filtered.filter(t => new Date(t.date) >= new Date(dateFrom));
-    }
-    if (dateTo) {
-      filtered = filtered.filter(t => new Date(t.date) <= new Date(dateTo));
-    }
-
-    // Filter by type
-    if (typeFilter !== "all") {
-      filtered = filtered.filter(t => t.type === typeFilter);
-    }
-
-    // Filter by category
-    if (categoryFilter !== "all") {
-      filtered = filtered.filter(t => t.category === categoryFilter);
-    }
-
-    // Filter by include settings
-    if (!includeIncome) {
-      filtered = filtered.filter(t => t.type !== "income");
-    }
-    if (!includeExpenses) {
-      filtered = filtered.filter(t => t.type !== "expense");
-    }
+    if (dateFrom) filtered = filtered.filter((t) => new Date(t.date) >= new Date(dateFrom));
+    if (dateTo) filtered = filtered.filter((t) => new Date(t.date) <= new Date(dateTo));
+    if (typeFilter !== "all") filtered = filtered.filter((t) => t.type === typeFilter);
+    if (categoryFilter !== "all") filtered = filtered.filter((t) => t.category === categoryFilter);
+    if (!includeIncome) filtered = filtered.filter((t) => t.type !== "income");
+    if (!includeExpenses) filtered = filtered.filter((t) => t.type !== "expense");
 
     setFilteredTransactions(filtered);
   };
 
   const getUniqueCategories = () => {
-    return Array.from(new Set(transactions.map(t => t.category))).sort();
-  };
-
-  const getExportStats = () => {
-    const totalIncome = filteredTransactions
-      .filter(t => t.type === "income")
-      .reduce((sum, t) => sum + t.amount, 0);
-
-    const totalExpenses = filteredTransactions
-      .filter(t => t.type === "expense")
-      .reduce((sum, t) => sum + t.amount, 0);
-
-    return {
-      totalIncome,
-      totalExpenses,
-      totalBalance: totalIncome - totalExpenses,
-      totalTransactions: filteredTransactions.length,
-      recentTransactions: filteredTransactions.slice(0, 10),
-    };
+    return Array.from(new Set(transactions.map((t) => t.category))).sort();
   };
 
   const handleExportPDF = async () => {
     if (filteredTransactions.length === 0) {
-      toast({
+      useToast({
         title: "No Data",
         description: "No transactions to export with current filters",
         variant: "destructive",
@@ -122,19 +111,37 @@ export default function ExportPDF() {
 
     setIsExporting(true);
     try {
-      const stats = getExportStats();
-      const doc = await generateTransactionsPDF(filteredTransactions, stats);
+      const payload = {
+        userId: user?.id,
+        dateFrom,
+        dateTo,
+        typeFilter,
+        categoryFilter,
+        includeIncome,
+        includeExpenses,
+        includeSummary,
+      };
 
-      const filename = `expense-report-${new Date().toISOString().split('T')[0]}.pdf`;
-      downloadPDF(doc, filename);
+      const response = await axios.post("/api/export/pdf", payload, {
+        responseType: "blob",
+      });
 
-      toast({
+      const blob = new Blob([response.data], { type: "application/pdf" });
+      const url = window.URL.createObjectURL(blob);
+      const link = document.createElement("a");
+      link.href = url;
+      link.setAttribute("download", `expense-report-${new Date().toISOString().split("T")[0]}.pdf`);
+      document.body.appendChild(link);
+      link.click();
+      link.remove();
+
+      useToast({
         title: "Success",
         description: `PDF exported successfully with ${filteredTransactions.length} transactions`,
       });
     } catch (error) {
       console.error("Export error:", error);
-      toast({
+      useToast({
         title: "Export Failed",
         description: "Failed to generate PDF. Please try again.",
         variant: "destructive",
@@ -153,8 +160,6 @@ export default function ExportPDF() {
     setIncludeExpenses(true);
   };
 
-  const stats = getExportStats();
-
   if (isLoading) {
     return (
       <div className="flex items-center justify-center h-full">
@@ -167,6 +172,8 @@ export default function ExportPDF() {
 
   return (
     <div className="min-h-screen bg-background">
+
+
       {/* Header */}
       <motion.header
         initial={{ opacity: 0, y: -20 }}
@@ -176,31 +183,16 @@ export default function ExportPDF() {
       >
         <div className="flex items-center justify-between">
           <div>
-            <h2 className="text-2xl font-semibold text-foreground" data-testid="text-export-title">
-              Export PDF Report
-            </h2>
+            <h2 className="text-2xl font-semibold text-foreground">Export PDF Report</h2>
             <p className="text-muted-foreground">Generate and download detailed financial reports</p>
           </div>
-          <div className="flex items-center space-x-4">
-            <Button
-              onClick={handleExportPDF}
-              disabled={isExporting || filteredTransactions.length === 0}
-              className="bg-purple-600 hover:bg-purple-700"
-              data-testid="button-export-pdf"
-            >
-              {isExporting ? (
-                <>
-                  <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white mr-2"></div>
-                  Generating...
-                </>
-              ) : (
-                <>
-                  <Download className="h-4 w-4 mr-2" />
-                  Export PDF
-                </>
-              )}
-            </Button>
-          </div>
+          <Button
+            onClick={handleExportPDF}
+            disabled={isExporting || filteredTransactions.length === 0}
+            className="bg-purple-600 hover:bg-purple-700"
+          >
+            {isExporting ? "Generating..." : <><Download className="h-4 w-4 mr-2" /> Export PDF</>}
+          </Button>
         </div>
       </motion.header>
 

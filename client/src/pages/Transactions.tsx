@@ -1,7 +1,6 @@
 import { useState, useEffect } from "react";
 import { motion } from "framer-motion";
-import { useAuth } from "@/hooks/useAuth";
-import { storageService } from "@/lib/storage";
+import { useAuth } from "@/context/AuthContext";
 import { TransactionList } from "@/components/TransactionList";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -9,12 +8,13 @@ import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Badge } from "@/components/ui/badge";
 import { Search, Filter, BarChart3 } from "lucide-react";
-import { Transaction } from "@shared/schema";
+import axios from "axios";
 
 export default function Transactions() {
   const { user } = useAuth();
-  const [transactions, setTransactions] = useState<Transaction[]>([]);
-  const [filteredTransactions, setFilteredTransactions] = useState<Transaction[]>([]);
+
+  const [transactions, setTransactions] = useState<any[]>([]);
+  const [filteredTransactions, setFilteredTransactions] = useState<any[]>([]);
   const [searchTerm, setSearchTerm] = useState("");
   const [typeFilter, setTypeFilter] = useState<"all" | "income" | "expense">("all");
   const [categoryFilter, setCategoryFilter] = useState<string>("all");
@@ -30,10 +30,22 @@ export default function Transactions() {
     filterTransactions();
   }, [transactions, searchTerm, typeFilter, categoryFilter]);
 
-  const loadTransactions = () => {
-    if (user) {
-      const userTransactions = storageService.getUserTransactions(user.id);
-      setTransactions(userTransactions.sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()));
+  const loadTransactions = async () => {
+    try {
+      setIsLoading(true);
+      const token = localStorage.getItem("token");
+      const res = await axios.get("/api/transactions/stats", {
+        headers: { Authorization: `Bearer ${token}` },
+      });
+
+      console.log("Response from server", res.data);
+
+      if (res.data.success && res.data.stats) {
+        setTransactions(res.data.stats.recentTransactions || []);
+      }
+    } catch (err) {
+      console.error("Failed to load transactions:", err);
+    } finally {
       setIsLoading(false);
     }
   };
@@ -41,45 +53,43 @@ export default function Transactions() {
   const filterTransactions = () => {
     let filtered = [...transactions];
 
-    // Filter by search term
     if (searchTerm) {
-      filtered = filtered.filter(t => 
-        t.category.toLowerCase().includes(searchTerm.toLowerCase()) ||
-        (t.description && t.description.toLowerCase().includes(searchTerm.toLowerCase()))
+      filtered = filtered.filter(
+        (t) =>
+          t.category.toLowerCase().includes(searchTerm.toLowerCase()) ||
+          (t.description && t.description.toLowerCase().includes(searchTerm.toLowerCase()))
       );
     }
 
-    // Filter by type
     if (typeFilter !== "all") {
-      filtered = filtered.filter(t => t.type === typeFilter);
+      filtered = filtered.filter((t) => t.type === typeFilter);
     }
 
-    // Filter by category
     if (categoryFilter !== "all") {
-      filtered = filtered.filter(t => t.category === categoryFilter);
+      filtered = filtered.filter((t) => t.category === categoryFilter);
     }
 
     setFilteredTransactions(filtered);
   };
 
   const getUniqueCategories = () => {
-    return Array.from(new Set(transactions.map(t => t.category))).sort();
+    return Array.from(new Set(transactions.map((t) => t.category))).sort();
   };
 
   const getTransactionStats = () => {
     const totalIncome = filteredTransactions
-      .filter(t => t.type === "income")
+      .filter((t) => t.type === "income")
       .reduce((sum, t) => sum + t.amount, 0);
-    
+
     const totalExpenses = filteredTransactions
-      .filter(t => t.type === "expense")
+      .filter((t) => t.type === "expense")
       .reduce((sum, t) => sum + t.amount, 0);
 
     return {
       totalIncome,
       totalExpenses,
       balance: totalIncome - totalExpenses,
-      count: filteredTransactions.length
+      count: filteredTransactions.length,
     };
   };
 
@@ -152,7 +162,11 @@ export default function Transactions() {
             <Card className="bg-gradient-to-r from-blue-50 to-blue-100">
               <CardContent className="p-4">
                 <div className="text-center">
-                  <div className={`text-2xl font-bold ${stats.balance >= 0 ? 'text-green-600' : 'text-red-600'}`} data-testid="text-filtered-balance">
+                  <div
+                    className={`text-2xl font-bold ${stats.balance >= 0 ? "text-green-600" : "text-red-600"
+                      }`}
+                    data-testid="text-filtered-balance"
+                  >
                     रु. {stats.balance.toLocaleString()}
                   </div>
                   <div className="text-sm text-blue-700">Net Balance</div>
@@ -261,10 +275,9 @@ export default function Transactions() {
                     No transactions found
                   </h3>
                   <p className="text-muted-foreground">
-                    {transactions.length === 0 
+                    {transactions.length === 0
                       ? "You haven't added any transactions yet."
-                      : "Try adjusting your filters to see more results."
-                    }
+                      : "Try adjusting your filters to see more results."}
                   </p>
                 </div>
               </CardContent>

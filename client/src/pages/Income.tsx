@@ -1,13 +1,13 @@
 import { useState, useEffect } from "react";
 import { motion } from "framer-motion";
-import { useAuth } from "@/hooks/useAuth";
-import { storageService } from "@/lib/storage";
+import { useAuth } from "@/context/AuthContext";
 import { TransactionForm } from "@/components/TransactionForm";
 import { TransactionList } from "@/components/TransactionList";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Plus } from "lucide-react";
-import { Transaction, InsertTransaction } from "@shared/schema";
+import type { Transaction, InsertTransaction } from "@shared/schema";
+import axios from "axios";
 
 export default function Income() {
   const { user } = useAuth();
@@ -22,34 +22,80 @@ export default function Income() {
     }
   }, [user]);
 
-  const loadTransactions = () => {
-    if (user) {
-      const userTransactions = storageService.getUserTransactions(user.id);
-      const incomeTransactions = userTransactions.filter(t => t.type === "income");
-      setTransactions(incomeTransactions.sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()));
+  const loadTransactions = async () => {
+    try {
+      setIsLoading(true);
+      const token = localStorage.getItem("token");
+      const res = await axios.get("/api/transactions", {
+        params: { userId: user?.id, type: "income" },
+        headers: { Authorization: `Bearer ${token}` },
+      });
+
+      console.log("Response", res.data);
+      setTransactions(res.data.transactions || []);
+    } catch (error) {
+      console.error("Failed to load income transactions:", error);
+    } finally {
       setIsLoading(false);
     }
   };
 
   const handleSubmit = async (data: InsertTransaction) => {
-    if (editingTransaction) {
-      await storageService.updateTransaction(editingTransaction.id, data);
-      setEditingTransaction(null);
-    } else {
-      await storageService.createTransaction({ ...data, type: "income" });
+    try {
+      const token = localStorage.getItem("token");
+
+      if (editingTransaction) {
+        // ✅ Update transaction in backend
+        const res = await axios.put(`/api/transactions/${editingTransaction._id}`, data, {
+          headers: { Authorization: `Bearer ${token}` },
+        });
+
+        // ✅ Update in state
+        setTransactions((prev) =>
+          prev.map((t) => (t._id === editingTransaction._id ? res.data.transaction : t))
+        );
+
+        // ✅ Reset form
+        setEditingTransaction(null);
+        setShowForm(false);
+      } else {
+        // ✅ Add new transaction in backend
+        const res = await axios.post(
+          "/api/transactions",
+          { ...data, type: "income", userId: user?.id },
+          { headers: { Authorization: `Bearer ${token}` } }
+        );
+
+        // ✅ Add to state (no reload)
+        setTransactions((prev) => [res.data.transaction, ...prev]);
+
+        // ✅ Close form
+        await loadTransactions();
+        setShowForm(false);
+      }
+    } catch (error) {
+      console.error("Failed to save income transaction:", error);
     }
-    loadTransactions();
-    setShowForm(false);
   };
 
-  const handleEdit = (transaction: Transaction) => {
+
+  const handleEdit = async (transaction: Transaction) => {
+    // ✅ FIX: Pre-fill form with existing transaction
     setEditingTransaction(transaction);
     setShowForm(true);
   };
 
   const handleDelete = async (id: string) => {
-    await storageService.deleteTransaction(id);
-    loadTransactions();
+    try {
+      const token = localStorage.getItem("token");
+      // ✅ FIX: Delete using backend `_id`
+      await axios.delete(`/api/transactions/${id}`, {
+        headers: { Authorization: `Bearer ${token}` },
+      });
+      await loadTransactions();
+    } catch (error) {
+      console.error("Failed to delete transaction:", error);
+    }
   };
 
   const handleCancel = () => {
@@ -57,7 +103,7 @@ export default function Income() {
     setShowForm(false);
   };
 
-  const totalIncome = transactions.reduce((sum, t) => sum + t.amount, 0);
+  const totalIncome = transactions?.reduce((sum, t) => sum + t.amount, 0);
 
   if (isLoading) {
     return (
@@ -93,12 +139,17 @@ export default function Income() {
               </div>
             </div>
             <Button
-              onClick={() => setShowForm(!showForm)}
+              onClick={() => {
+                if (showForm) {
+                  setEditingTransaction(null); // ✅ FIX: reset editing when closing form
+                }
+                setShowForm(!showForm);
+              }}
               data-testid="button-add-income"
               className="bg-green-600 hover:bg-green-700"
             >
               <Plus className="h-4 w-4 mr-2" />
-              Add Income
+              {showForm ? "Close" : "Add Income"}
             </Button>
           </div>
         </div>
@@ -147,7 +198,10 @@ export default function Income() {
                 </div>
                 <div className="text-center p-4 bg-purple-50 rounded-lg">
                   <div className="text-2xl font-bold text-purple-600" data-testid="text-average-amount">
-                    रु. {transactions.length > 0 ? Math.round(totalIncome / transactions.length).toLocaleString() : 0}
+                    रु.{" "}
+                    {transactions.length > 0
+                      ? Math.round(totalIncome / transactions.length).toLocaleString()
+                      : 0}
                   </div>
                   <div className="text-sm text-purple-700">Average Amount</div>
                 </div>
@@ -164,8 +218,8 @@ export default function Income() {
         >
           <TransactionList
             transactions={transactions}
-            onEdit={handleEdit}
-            onDelete={handleDelete}
+            onEdit={handleEdit} // ✅ FIX: Pass edit handler
+            onDelete={handleDelete} // ✅ FIX: Pass delete handler
             showActions={true}
             title="Income Transactions"
           />

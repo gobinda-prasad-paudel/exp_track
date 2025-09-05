@@ -1,13 +1,13 @@
 import { useState, useEffect } from "react";
 import { motion } from "framer-motion";
-import { useAuth } from "@/hooks/useAuth";
-import { storageService } from "@/lib/storage";
+import { useAuth } from "@/context/AuthContext";
 import { TransactionForm } from "@/components/TransactionForm";
 import { TransactionList } from "@/components/TransactionList";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Plus } from "lucide-react";
-import { Transaction, InsertTransaction } from "@shared/schema";
+import type { Transaction, InsertTransaction } from "@shared/schema";
+import axios from "axios";
 
 export default function Expenses() {
   const { user } = useAuth();
@@ -22,24 +22,37 @@ export default function Expenses() {
     }
   }, [user]);
 
-  const loadTransactions = () => {
-    if (user) {
-      const userTransactions = storageService.getUserTransactions(user.id);
-      const expenseTransactions = userTransactions.filter(t => t.type === "expense");
-      setTransactions(expenseTransactions.sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()));
+  const loadTransactions = async () => {
+    try {
+      setIsLoading(true);
+      const token = localStorage.getItem("token");
+      const res = await axios.get<Transaction[]>("/api/transactions", {
+        params: { userId: user?.id, type: "expense" },
+        headers: { Authorization: `Bearer ${token}` },
+      });
+
+      console.log("Response", res.data);
+      setTransactions(res.data.transactions);
+    } catch (error) {
+      console.error("Failed to load expense transactions:", error);
+    } finally {
       setIsLoading(false);
     }
   };
 
   const handleSubmit = async (data: InsertTransaction) => {
-    if (editingTransaction) {
-      await storageService.updateTransaction(editingTransaction.id, data);
-      setEditingTransaction(null);
-    } else {
-      await storageService.createTransaction({ ...data, type: "expense" });
+    try {
+      if (editingTransaction) {
+        await axios.put(`/api/transactions/${editingTransaction.id}`, data);
+        setEditingTransaction(null);
+      } else {
+        await axios.post("/api/transactions", { ...data, type: "expense", userId: user?.id });
+      }
+      loadTransactions();
+      setShowForm(false);
+    } catch (error) {
+      console.error("Failed to save expense transaction:", error);
     }
-    loadTransactions();
-    setShowForm(false);
   };
 
   const handleEdit = (transaction: Transaction) => {
@@ -48,8 +61,12 @@ export default function Expenses() {
   };
 
   const handleDelete = async (id: string) => {
-    await storageService.deleteTransaction(id);
-    loadTransactions();
+    try {
+      await axios.delete(`/api/transactions/${id}`);
+      loadTransactions();
+    } catch (error) {
+      console.error("Failed to delete transaction:", error);
+    }
   };
 
   const handleCancel = () => {
@@ -92,7 +109,7 @@ export default function Expenses() {
                 रु. {totalExpenses.toLocaleString()}
               </div>
             </div>
-            <Button 
+            <Button
               onClick={() => setShowForm(!showForm)}
               data-testid="button-add-expense"
               className="bg-red-600 hover:bg-red-700"

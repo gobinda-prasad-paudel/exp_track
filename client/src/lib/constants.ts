@@ -34,4 +34,4 @@ export const STORAGE_KEYS = {
 
 
 export const useAuth = () => {
-  return {isAuthenticated: true}}
+  return {isAuthenticated: false}}

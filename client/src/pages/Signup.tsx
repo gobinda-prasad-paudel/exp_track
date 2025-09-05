@@ -4,7 +4,7 @@ import { Link, useLocation } from "wouter";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
-import { useAuth } from "@/hooks/useAuth";
+import { useAuth } from "@/context/AuthContext";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -28,7 +28,7 @@ type SignupFormData = z.infer<typeof signupSchema>;
 
 const features = [
   "Track income and expenses with Bikram Sambat dates",
-  "Beautiful dashboard with financial analytics", 
+  "Beautiful dashboard with financial analytics",
   "Categorize transactions for better insights",
   "Export detailed PDF reports",
   "Secure local storage - your data stays private"
@@ -37,7 +37,7 @@ const features = [
 export default function Signup() {
   const [, setLocation] = useLocation();
   const { register, isAuthenticated } = useAuth();
-  const { toast } = useToast();
+  // const { toast } = useToast();
   const [isLoading, setIsLoading] = useState(false);
   const [showPassword, setShowPassword] = useState(false);
   const [showConfirmPassword, setShowConfirmPassword] = useState(false);
@@ -70,22 +70,23 @@ export default function Signup() {
         email: data.email,
         password: data.password,
       });
-      
+
       if (success) {
-        toast({
+        useToast({
           title: "Account created successfully!",
           description: "Welcome to ExpenseTracker. You can now start managing your finances.",
+          variant: "success"
         });
         setLocation("/dashboard");
       } else {
-        toast({
+        useToast({
           title: "Registration Failed",
           description: "Username or email already exists. Please try different credentials.",
           variant: "destructive",
         });
       }
     } catch (error) {
-      toast({
+      useToast({
         title: "Error",
         description: "An unexpected error occurred. Please try again.",
         variant: "destructive",
@@ -163,7 +164,7 @@ export default function Signup() {
                   Start your financial journey with ExpenseTracker
                 </p>
               </CardHeader>
-              
+
               <CardContent>
                 <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4">
                   <div className="grid grid-cols-2 gap-4">

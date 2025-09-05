@@ -9,11 +9,12 @@ interface LayoutProps {
 
 export function Layout({ children }: LayoutProps) {
   const [location] = useLocation();
-  const isHomePage = location === "/";
+  const isUnprotectedPage = ["/", "/login", "/signup"].includes(location);
+
 
   return (
     <div className="min-h-screen bg-background">
-      {isHomePage ? (
+      {isUnprotectedPage ? (
         <div className="flex flex-col min-h-screen">
           <TopNavbar />
           <main className="flex-1">

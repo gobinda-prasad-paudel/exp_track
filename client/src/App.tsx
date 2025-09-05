@@ -114,11 +114,23 @@ import Signup from "@/pages/Signup";
 import Profile from "@/pages/Profile";
 import NotFound from "@/pages/not-found";
 import { useAuth } from "@/lib/constants";
+import { AuthContext } from "@/context/AuthContext";
+
+
+import { useContext } from "react";
 
 function ProtectedRoute({ children }: { children: React.ReactNode }) {
-  const { isAuthenticated } = useAuth();
+  const { isAuthenticated, loading } = useContext(AuthContext)!;
+
+
+  if (loading) {
+    return <div className="flex h-screen items-center justify-center">
+      <span>Checking session...</span>
+    </div>;
+  }
 
   if (!isAuthenticated) {
+    console.log("Is authenticated : ", isAuthenticated)
     return <Redirect to="/login" />;
   }
 
@@ -128,38 +140,15 @@ function ProtectedRoute({ children }: { children: React.ReactNode }) {
 function Router() {
   return (
     <Layout>
+      <Route path="/" component={Home} />
+      <Route path="/login" component={Login} />
+      <Route path="/signup" component={Signup} />
+
       <Switch>
-        <Toaster
-          position="top-center"
-          reverseOrder={false}
-          gutter={8}
-          containerClassName=""
-          containerStyle={{}}
-          toasterId="default"
-          toastOptions={{
-            // Define default options
-            className: '',
-            duration: 5000,
-            removeDelay: 1000,
-            style: {
-              background: '#363636',
-              color: '#fff',
-            },
 
-            // Default options for specific types
-            success: {
-              duration: 3000,
-              iconTheme: {
-                primary: 'green',
-                secondary: 'black',
-              },
-            },
-          }}
-        />
 
-        <Route path="/" component={Home} />
-        <Route path="/login" component={Login} />
-        <Route path="/signup" component={Signup} />
+        {/* <Toaster /> */}
+
 
         <Route path="/dashboard">
           <ProtectedRoute>

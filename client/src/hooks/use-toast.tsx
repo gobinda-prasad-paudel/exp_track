@@ -10,11 +10,12 @@ interface ToastOptions {
   variant?: ToastVariant;
 }
 
-export function showToast({ title, description, variant = "default" }: ToastOptions) {
+export function useToast(data: ToastOptions) {
+  const { title, description, variant = "default" } = data;
   toast.custom((t) => (
     <div
       className={`${t.visible ? "animate-enter" : "animate-leave"
-        } max-w-md w-full bg-white shadow-lg rounded-lg pointer-events-auto flex ring-1 ring-black ring-opacity-5 p-4 ${variant === "destructive" ? "bg-red-600 text-white" : ""
+        } max-w-md w-full  shadow-lg rounded-lg pointer-events-auto flex ring-1 ring-black ring-opacity-5 p-4 ${variant === "destructive" ? "bg-red-600 text-white" : ""
         } ${variant === "success" ? "bg-green-600 text-white" : ""}`}
     >
       <div className="flex-1">

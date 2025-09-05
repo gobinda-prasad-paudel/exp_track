@@ -39,7 +39,7 @@ export function TransactionForm({
   isEditing = false
 }: TransactionFormProps) {
   const [isSubmitting, setIsSubmitting] = useState(false);
-  const { toast } = useToast();
+  // const { toast } = useuseToast();
   const { user } = useAuth();
 
   const form = useForm<TransactionFormData>({
@@ -57,6 +57,7 @@ export function TransactionForm({
   const categories = watchedType === "income" ? INCOME_CATEGORIES : EXPENSE_CATEGORIES;
 
   const handleSubmit = async (data: TransactionFormData) => {
+    console.log("Income form data", data)
     setIsSubmitting(true);
     try {
       if (isEditing && transaction?._id) {
@@ -64,25 +65,28 @@ export function TransactionForm({
         await axios.put(`/api/transactions/${transaction._id}`, data, {
           headers: { Authorization: `Bearer ${localStorage.getItem("token")}` }
         });
-        toast({
+        useToast({
           title: "Success",
           description: "Transaction updated successfully",
+          variant: "success"
+
         });
       } else {
         // Create transaction
-        await axios.post("/api/transactions", data, {
+        const newTransaction = await axios.post("/api/transactions", data, {
           headers: { Authorization: `Bearer ${localStorage.getItem("token")}` }
         });
-        toast({
+        useToast({
           title: "Success",
           description: "Transaction added successfully",
+          variant: "success"
         });
         form.reset();
       }
       if (onSuccess) onSuccess();
     } catch (error) {
       console.error(error);
-      toast({
+      useToast({
         title: "Error",
         description: "Failed to save transaction",
         variant: "destructive",

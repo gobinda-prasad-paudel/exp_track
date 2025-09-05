@@ -1,6 +1,6 @@
 import { Link, useLocation } from "wouter";
 import { motion } from "framer-motion";
-import { useAuth } from "@/lib/constants";
+import { useAuth } from "@/context/AuthContext";
 import { getCurrentBSDateString } from "@/lib/date-utils";
 import {
   Wallet,
@@ -60,8 +60,8 @@ export function Sidebar() {
                 whileHover={{ x: 4 }}
                 transition={{ duration: 0.2 }}
                 className={`sidebar-nav-link flex items-center space-x-3 px-3 py-2 rounded-md transition-colors duration-200 ${isActive
-                    ? "active bg-primary text-primary-foreground"
-                    : "text-muted-foreground hover:text-foreground"
+                  ? "active bg-primary text-primary-foreground"
+                  : "text-muted-foreground hover:text-foreground"
                   }`}
               >
                 <Icon className="h-5 w-5" />
@@ -77,8 +77,8 @@ export function Sidebar() {
               whileHover={{ x: 4 }}
               transition={{ duration: 0.2 }}
               className={`sidebar-nav-link flex items-center space-x-3 px-3 py-2 rounded-md transition-colors duration-200 ${location === "/profile"
-                  ? "active bg-primary text-primary-foreground"
-                  : "text-muted-foreground hover:text-foreground"
+                ? "active bg-primary text-primary-foreground"
+                : "text-muted-foreground hover:text-foreground"
                 }`}
             >
               <User className="h-5 w-5" />

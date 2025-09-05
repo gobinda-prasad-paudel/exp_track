@@ -2,7 +2,6 @@ import { useEffect, useState } from "react";
 import { motion } from "framer-motion";
 import { Link } from "wouter";
 import axios from "axios";
-import { useAuth } from "@/hooks/useAuth";
 import { getCurrentBSDateString } from "@/lib/date-utils";
 import { StatCard } from "@/components/StatCard";
 import { Button } from "@/components/ui/button";
@@ -18,12 +17,13 @@ import {
   BarChart3,
   Download
 } from "lucide-react";
-import type { LucideIcon } from "lucide-react";
+import { useAuth } from "@/context/AuthContext";
+
 
 
 export default function Dashboard() {
   const { user } = useAuth();
-  const [stats, setStats] = useState<any>(null);
+  const [stats, setStats] = useState<object>({});
   const [isLoading, setIsLoading] = useState(true);
 
   useEffect(() => {
@@ -32,11 +32,15 @@ export default function Dashboard() {
         if (!user) return;
 
         const token = localStorage.getItem("token");
-        const res = await axios.get(`/api/stats/${user.id}`, {
-          headers: { Authorization: `Bearer ${token}` }
+        const res = await axios.get(`/api/transactions/stats`, {
+          headers: { Authorization: `Bearer ${token}` },
         });
 
-        setStats(res.data); // backend should return same structure as before
+        // ✅ log response directly
+        console.log("Transactions from backend:", res.data);
+
+        // ✅ update state
+        setStats(res.data.stats);
       } catch (err) {
         console.error("Error fetching dashboard stats:", err);
       } finally {
@@ -46,6 +50,14 @@ export default function Dashboard() {
 
     fetchStats();
   }, [user]);
+
+  // // ✅ react to stats when it changes
+  // useEffect(() => {
+  //   if (stats) {
+  //     console.log("Stats updated in state:", stats);
+  //   }
+  // }, [stats]);
+
 
   if (isLoading || !stats) {
     return (
@@ -89,7 +101,7 @@ export default function Dashboard() {
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
           <StatCard
             title="Total Balance"
-            value={`रु. ${stats.totalBalance.toLocaleString()}`}
+            value={`रु. ${stats.totalBalance?.toLocaleString()}`}
             change="+12.5%"
             changeType="positive"
             icon={Wallet}
@@ -97,7 +109,7 @@ export default function Dashboard() {
 
           <StatCard
             title="Total Income"
-            value={`रु. ${stats.totalIncome.toLocaleString()}`}
+            value={`रु. ${stats.totalIncome?.toLocaleString()}`}
             change="+8.2%"
             changeType="positive"
             icon={TrendingUp}
@@ -107,7 +119,7 @@ export default function Dashboard() {
 
           <StatCard
             title="Total Expenses"
-            value={`रु. ${stats.totalExpenses.toLocaleString()}`}
+            value={`रु. ${stats.totalExpenses?.toLocaleString()}`}
             change="-3.1%"
             changeType="negative"
             icon={TrendingDown}
@@ -117,7 +129,7 @@ export default function Dashboard() {
 
           <StatCard
             title="Transactions"
-            value={stats.totalTransactions.toString()}
+            value={stats.totalTransactions?.toString()}
             change="+15"
             changeType="positive"
             icon={List}
@@ -156,7 +168,7 @@ export default function Dashboard() {
                     <div className="text-center">
                       <BarChart3 className="h-12 w-12 mx-auto mb-2 text-muted-foreground/50" />
                       <p>Charts will be displayed here</p>
-                      <p className="text-sm">This Month: रु. {stats.thisMonthIncome.toLocaleString()} income, रु. {stats.thisMonthExpenses.toLocaleString()} expenses</p>
+                      <p className="text-sm">This Month: रु. {stats.thisMonthIncome?.toLocaleString()} income, रु. {stats.thisMonthExpenses?.toLocaleString()} expenses</p>
                     </div>
                   </div>
                 </CardContent>
@@ -203,7 +215,7 @@ export default function Dashboard() {
                 </div>
               </CardHeader>
               <CardContent>
-                {stats.recentTransactions.length > 0 ? (
+                {stats.recentTransactions?.length > 0 ? (
                   <div className="space-y-3">
                     {stats.recentTransactions.slice(0, 5).map((transaction: any) => (
                       <div
